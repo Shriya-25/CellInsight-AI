@@ -1,0 +1,272 @@
+#root {
+  min-height: 100vh;
+}
+main {
+  max-width: 1180px;
+  margin: auto;
+  padding: 0 32px 56px;
+}
+.topbar {
+  height: 78px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #dce4ed;
+}
+.brand {
+  font-size: 1.2rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+.brand span {
+  color: #2b7a78;
+}
+.connection {
+  color: #9d3b3b;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+.connection::before {
+  content: "●";
+  margin-right: 7px;
+}
+.connection.online {
+  color: #277058;
+}
+.hero {
+  padding: 80px 0 48px;
+  max-width: 760px;
+}
+.eyebrow {
+  color: #2b7a78;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin: 0 0 12px;
+}
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+h1 {
+  color: #102840;
+  font-size: clamp(2.5rem, 5.2vw, 4.6rem);
+  letter-spacing: -0.065em;
+  line-height: 0.98;
+  margin-bottom: 24px;
+}
+h2 {
+  font-size: 1.35rem;
+  letter-spacing: -0.035em;
+  margin-bottom: 9px;
+}
+.subtitle {
+  color: #526477;
+  font-size: 1.06rem;
+  line-height: 1.55;
+  max-width: 650px;
+}
+.muted {
+  color: #68798a;
+  line-height: 1.5;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 20px;
+}
+.upload-card,
+.results-card {
+  background: #fff;
+  border: 1px solid #dbe5eb;
+  box-shadow: 0 12px 32px #213d5c0d;
+  border-radius: 18px;
+  padding: 30px;
+}
+.upload-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.file-picker {
+  border: 1.5px dashed #aebfc9;
+  background: #f9fbfc;
+  border-radius: 12px;
+  min-height: 106px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 18px;
+  color: #244759;
+  font-weight: 700;
+}
+.file-picker input {
+  display: none;
+}
+.file-picker small {
+  color: #788999;
+  font-weight: 500;
+  margin-top: 5px;
+}
+button {
+  border: 0;
+  border-radius: 9px;
+  background: #173f57;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 750;
+  padding: 13px 18px;
+  transition: background 0.2s;
+}
+button:hover {
+  background: #0f3045;
+}
+button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+.error {
+  color: #b63d3d;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+.results-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+.risk {
+  background: #eaf4f3;
+  color: #276765;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #e2eaef;
+  margin: 25px 0 18px;
+}
+.metric {
+  padding: 19px 8px 13px 0;
+  border-bottom: 1px solid #e2eaef;
+}
+.metric:nth-child(even) {
+  padding-left: 22px;
+}
+.metric span {
+  display: block;
+  color: #6d7e8c;
+  font-size: 0.83rem;
+  margin-bottom: 4px;
+}
+.metric strong {
+  font-size: 1.7rem;
+  letter-spacing: -0.05em;
+}
+.disclaimer {
+  color: #71808e;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  margin: 0;
+}
+.roadmap {
+  margin-top: 64px;
+}
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.roadmap-grid div {
+  background: #eaf1f4;
+  border-radius: 13px;
+  padding: 20px;
+}
+.roadmap-grid span {
+  color: #2b7a78;
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+.roadmap-grid h3 {
+  margin: 18px 0 7px;
+  letter-spacing: -0.025em;
+}
+.roadmap-grid p {
+  color: #637889;
+  margin-bottom: 0;
+  font-size: 0.9rem;
+}
+@media (max-width: 760px) {
+  main {
+    padding: 0 18px 40px;
+  }
+  .hero {
+    padding: 52px 0 34px;
+  }
+  .workspace,
+  .roadmap-grid {
+    grid-template-columns: 1fr;
+  }
+  .upload-card,
+  .results-card {
+    padding: 23px;
+  }
+}
+.subtypes {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.subtype-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.subtype-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: #f9fafb;
+}
+
+.subtype-row.flagged {
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 600;
+}
+.reliability-note {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  background: #fffbeb;
+  color: #92400e;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.download-report {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.7rem;
+  background: #0f172a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.download-report:hover {
+  background: #1e293b;
+}
