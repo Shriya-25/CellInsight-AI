@@ -2,6 +2,11 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import multer from "multer";
+import { connectDB } from "./config/db.js";
+import caseRoutes from "./routes/cases.js";
+
+// Connect to MongoDB
+connectDB();
 
 const app = express();
 const upload = multer({
@@ -12,6 +17,9 @@ const port = process.env.PORT || 3001;
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || "http://localhost:5173" }));
 app.use(express.json());
+
+// Routes
+app.use("/api/cases", caseRoutes);
 
 app.get("/api/health", (_request, response) => {
   response.json({ status: "ok", service: "blood-smear-api" });
@@ -46,8 +54,9 @@ app.post("/api/analysis", upload.single("image"), async (request, response) => {
     const result = await inferenceResponse.json();
 
     // Simple placeholder decision-support logic. Replace with real thresholds later.
-    const status = "Screening complete";
-    const risk = result.wbcCount > 20 ? "Review suggested" : "Normal range";
+    // Updated to use medically cautious terminology
+    const status = "Processing complete";
+    const risk = result.wbcCount > 20 ? "Review required" : "AI suggestion: No abnormal flag";
 
     response.json({ ...result, status, risk });
   } catch (error) {
@@ -66,6 +75,8 @@ app.use((error, _request, response, _next) => {
   return response.status(500).json({ error: "Unexpected server error." });
 });
 
-app.listen(port, () =>
+const server = app.listen(port, () =>
   console.log(`Blood smear API listening at http://localhost:${port}`),
 );
+
+export { app, server };
