@@ -4,6 +4,8 @@ import express from "express";
 import multer from "multer";
 import { connectDB } from "./config/db.js";
 import caseRoutes from "./routes/cases.js";
+import authRoutes from "./routes/auth.js";
+import { authenticateToken } from "./middleware/auth.js";
 
 // Connect to MongoDB
 connectDB();
@@ -19,7 +21,8 @@ app.use(cors({ origin: process.env.CLIENT_ORIGIN || "http://localhost:5173" }));
 app.use(express.json());
 
 // Routes
-app.use("/api/cases", caseRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/cases", authenticateToken, caseRoutes);
 
 app.get("/api/health", (_request, response) => {
   response.json({ status: "ok", service: "blood-smear-api" });

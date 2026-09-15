@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 import "./App.css";
+import Login from "./Login.jsx";
 const API_URL = import.meta.env.VITE_API_URL;
 const initialAnalysis = {
   totalCells: 0,
@@ -23,11 +24,28 @@ const SUBTYPE_LABELS = {
 };
 
 function App() {
+  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user") || "null"));
+
   const [apiStatus, setApiStatus] = useState("Checking API…");
   const [file, setFile] = useState(null);
   const [analysis, setAnalysis] = useState(initialAnalysis);
   const [isAnalysing, setIsAnalysing] = useState(false);
   const [error, setError] = useState("");
+
+  const handleLoginSuccess = (newToken, newUser) => {
+    localStorage.setItem("token", newToken);
+    localStorage.setItem("user", JSON.stringify(newUser));
+    setToken(newToken);
+    setUser(newUser);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken(null);
+    setUser(null);
+  };
 
   useEffect(() => {
     fetch(`${API_URL}/api/health`)
@@ -51,6 +69,9 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/api/analysis`, {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
         body: formData,
       });
       if (!response.ok) throw new Error("Analysis request failed");
@@ -243,16 +264,24 @@ function App() {
 
   const hasResult = analysis.totalCells > 0;
 
+  if (!token) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <main>
       <header className="topbar">
         <div className="brand">
           <span>✦</span> CellInsight AI
         </div>
-        <div
-          className={`connection ${apiStatus === "API connected" ? "online" : ""}`}
-        >
-          {apiStatus}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div
+            className={`connection ${apiStatus === "API connected" ? "online" : ""}`}
+          >
+            {apiStatus}
+          </div>
+          <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{user?.name} ({user?.role})</span>
+          <button onClick={handleLogout} style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem', background: '#334155', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>Logout</button>
         </div>
       </header>
 
