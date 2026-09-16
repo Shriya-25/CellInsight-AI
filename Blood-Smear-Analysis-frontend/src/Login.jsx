@@ -37,6 +37,11 @@ export default function Login({ onLoginSuccess }) {
     }
   };
 
+  const handleDemoLogin = (e) => {
+    e.preventDefault();
+    onLoginSuccess('demo-token-123', { name: 'Demo Pathologist', role: 'doctor/pathologist' });
+  };
+
   return (
     <div className="login-page">
       {/* Main Container: Full Viewport Split Screen */}
@@ -142,14 +147,27 @@ export default function Login({ onLoginSuccess }) {
                 </div>
 
                 {/* Primary CTA Button */}
-                <button
-                  className="btn-submit"
-                  disabled={loading}
-                  type="submit"
-                >
-                  <span>{loading ? 'Signing in...' : 'Sign In'}</span>
-                  <span aria-hidden="true">→</span>
-                </button>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <button
+                    className="btn-submit"
+                    disabled={loading}
+                    type="submit"
+                    style={{ flex: 1 }}
+                  >
+                    <span>{loading ? 'Signing in...' : 'Sign In'}</span>
+                    <span aria-hidden="true">→</span>
+                  </button>
+                  
+                  <button
+                    className="btn-submit"
+                    type="button"
+                    onClick={handleDemoLogin}
+                    style={{ flex: 1, backgroundColor: '#565e74' }}
+                    title="Bypass login for UI testing"
+                  >
+                    <span>Demo Mode</span>
+                  </button>
+                </div>
               </form>
 
               {/* Card Footer Legal Text */}
