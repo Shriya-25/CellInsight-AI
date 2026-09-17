@@ -14,8 +14,7 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
-    minute: '2-digit',
-    timeZoneName: 'short'
+    minute: '2-digit'
   }).replace(/, /g, ' · ');
 
   return (
@@ -58,13 +57,21 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
             <div>
               <div className="px-space-md py-space-xs font-label-sm text-label-sm uppercase tracking-wider text-outline font-medium">Case Management</div>
               <div className="mt-space-xs space-y-0.5">
-                <a href="#" className="flex items-center justify-between px-space-md py-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
+                <a 
+                  href="#" 
+                  onClick={(e) => { e.preventDefault(); onNavigate('patients'); }}
+                  className={`flex items-center justify-between px-space-md py-2 transition-colors rounded-xl ${currentView === 'patients' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}`}
+                >
                   <div className="flex items-center gap-space-md">
                     <span className="material-symbols-outlined text-[18px]">groups</span>
                     <span className="font-body-md text-body-md">Patients</span>
                   </div>
                 </a>
-                <a href="#" className="flex items-center justify-between px-space-md py-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
+                <a 
+                  href="#" 
+                  onClick={(e) => { e.preventDefault(); onNavigate('cases'); }}
+                  className={`flex items-center justify-between px-space-md py-2 transition-colors rounded-xl ${currentView === 'cases' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}`}
+                >
                   <div className="flex items-center gap-space-md">
                     <span className="material-symbols-outlined text-[18px]">folder_shared</span>
                     <span className="font-body-md text-body-md">Cases</span>

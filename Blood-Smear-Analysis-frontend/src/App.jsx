@@ -4,6 +4,8 @@ import Login from "./Login.jsx";
 import Layout from "./Layout.jsx";
 import Dashboard from "./Dashboard.jsx";
 import ImageAnalysis from "./ImageAnalysis.jsx";
+import Patients from "./Patients.jsx";
+import Cases from "./Cases.jsx";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -38,6 +40,8 @@ function App() {
     >
       {currentView === 'dashboard' && <Dashboard />}
       {currentView === 'image-analysis' && <ImageAnalysis token={token} />}
+      {currentView === 'patients' && <Patients />}
+      {currentView === 'cases' && <Cases />}
     </Layout>
   );
 }
