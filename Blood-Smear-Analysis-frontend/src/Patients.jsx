@@ -401,11 +401,11 @@ export default function Patients() {
 
       {/* Patient Profile Drawer */}
       <div 
-        className={`fixed inset-0 bg-slate-900/40 z-40 backdrop-blur-sm transition-opacity duration-200 ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
+        className={`fixed inset-0 bg-slate-900/40 z-[90] backdrop-blur-sm transition-opacity duration-200 ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
         onClick={() => setIsDrawerOpen(false)}
       ></div>
       <aside 
-        className={`fixed top-0 right-0 bottom-0 w-full max-w-xl bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 bottom-0 w-full max-w-xl bg-white shadow-2xl z-[100] transform transition-transform duration-300 ease-in-out flex flex-col ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="p-6 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
           <div className="flex items-start gap-3">
@@ -532,7 +532,7 @@ export default function Patients() {
 
       {/* New Patient Modal */}
       <div 
-        className={`fixed inset-0 bg-slate-900/40 z-50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-200 ${isModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-slate-900/40 z-[100] backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-200 ${isModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={(e) => {
           if (e.target === e.currentTarget) setIsModalOpen(false);
         }}

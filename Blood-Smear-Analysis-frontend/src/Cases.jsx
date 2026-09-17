@@ -43,12 +43,56 @@ const CustomSelect = ({ value, onChange, options }) => {
   );
 };
 
+const FormSelect = ({ value, onChange, options }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div 
+        className={`w-full h-9 px-3 bg-slate-50 border ${isOpen ? 'border-teal-600 ring-1 ring-teal-600 bg-white' : 'border-slate-200'} rounded-lg text-slate-900 text-xs flex items-center justify-between cursor-pointer transition-all`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="truncate">{options.find(o => o.value === value)?.label || value}</span>
+        <svg className={`w-4 h-4 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </div>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg z-[110] py-1">
+          {options.map(opt => (
+            <div 
+              key={opt.value}
+              className={`px-3 py-2 text-xs cursor-pointer transition-colors ${value === opt.value ? 'bg-teal-50 text-teal-700 font-semibold' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'} ${opt.value === 'new' ? 'text-teal-600 font-medium border-t border-slate-100 mt-1' : ''}`}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function Cases() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [testFilter, setTestFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalPatient, setModalPatient] = useState('Rahul Deshmukh (P-1021)');
 
   const cases = [
     { id: 'CS-1024', patient: 'Rahul Deshmukh', patientId: 'P-1021', test: 'CBC + Blood Smear', date: '06 Sep 2026', finding: 'Abnormal cell pattern', confidence: 94.6, status: 'Review Required', priority: 'High', colorType: 'error' },
@@ -309,7 +353,7 @@ export default function Cases() {
 
       {/* New Case Modal */}
       <div 
-        className={`fixed inset-0 bg-slate-900/40 z-50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-200 ${isModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-slate-900/40 z-[100] backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-200 ${isModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={(e) => {
           if (e.target === e.currentTarget) setIsModalOpen(false);
         }}
@@ -338,14 +382,18 @@ export default function Cases() {
               {/* Patient Selector */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Patient Selector <span className="text-rose-500">*</span></label>
-                <select required className="w-full h-9 px-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600" defaultValue="Rahul Deshmukh (P-1021)">
-                  <option value="Rahul Deshmukh (P-1021)">Rahul Deshmukh (P-1021)</option>
-                  <option value="Anita Shah (P-1022)">Anita Shah (P-1022)</option>
-                  <option value="Rohan Patil (P-1023)">Rohan Patil (P-1023)</option>
-                  <option value="Sneha Kulkarni (P-1024)">Sneha Kulkarni (P-1024)</option>
-                  <option value="Vikram Sen (P-1025)">Vikram Sen (P-1025)</option>
-                  <option value="new">+ Add New Patient...</option>
-                </select>
+                <FormSelect 
+                  value={modalPatient} 
+                  onChange={setModalPatient} 
+                  options={[
+                    { value: 'Rahul Deshmukh (P-1021)', label: 'Rahul Deshmukh (P-1021)' },
+                    { value: 'Anita Shah (P-1022)', label: 'Anita Shah (P-1022)' },
+                    { value: 'Rohan Patil (P-1023)', label: 'Rohan Patil (P-1023)' },
+                    { value: 'Sneha Kulkarni (P-1024)', label: 'Sneha Kulkarni (P-1024)' },
+                    { value: 'Vikram Sen (P-1025)', label: 'Vikram Sen (P-1025)' },
+                    { value: 'new', label: '+ Add New Patient...' }
+                  ]} 
+                />
               </div>
               {/* Sample ID */}
               <div>
