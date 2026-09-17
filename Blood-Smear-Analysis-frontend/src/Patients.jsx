@@ -89,7 +89,21 @@ const FormSelect = ({ value, onChange, options, name, required }) => {
   );
 };
 
-const PatientProfile = ({ patient, onBack }) => {
+const PatientProfile = ({ patient, onBack, onUpdatePatient }) => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({});
+
+  const handleEditClick = () => {
+    setEditForm({ ...patient });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    onUpdatePatient(editForm);
+    setIsEditModalOpen(false);
+  };
+
   return (
     <div className="flex flex-col w-full max-w-7xl mx-auto space-y-6 pb-10">
       {/* Top Breadcrumb & Actions Bar */}
@@ -123,23 +137,6 @@ const PatientProfile = ({ patient, onBack }) => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Patient Demographics & Baseline Info (7 cols) */}
         <div className="lg:col-span-7 bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 flex flex-col gap-6">
-          {/* Section Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-teal-600">
-                <span className="material-symbols-outlined text-[22px]">badge</span>
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">Patient Information</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Verified master patient index record</p>
-              </div>
-            </div>
-            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold transition-colors" type="button">
-              <span className="material-symbols-outlined text-[16px]">edit</span>
-              <span>Edit Patient</span>
-            </button>
-          </div>
-
           {/* Unified Patient Identity Header */}
           <div className="flex flex-wrap items-center justify-between gap-4 pb-2">
             <div className="flex items-center gap-4">
@@ -150,6 +147,10 @@ const PatientProfile = ({ patient, onBack }) => {
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-semibold text-slate-900">{patient.name}</span>
                   <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[11px] font-semibold">{patient.id}</span>
+                  <button onClick={handleEditClick} className="ml-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-semibold transition-colors" type="button">
+                    <span className="material-symbols-outlined text-[14px]">edit</span>
+                    <span>Edit</span>
+                  </button>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">Registered {patient.date} • {patient.gender} • {patient.age} yrs</p>
               </div>
@@ -386,6 +387,151 @@ const PatientProfile = ({ patient, onBack }) => {
           </table>
         </div>
       </div>
+
+      {/* Edit Patient Modal */}
+      <div 
+        className={`fixed inset-0 bg-slate-900/40 z-[100] backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-200 ${isEditModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setIsEditModalOpen(false);
+        }}
+      >
+        <div className={`bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-xl w-full overflow-hidden transform transition-all duration-200 ${isEditModalOpen ? 'scale-100' : 'scale-95'}`}>
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-slate-900">Edit Patient Details</h2>
+                <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">{editForm.id}</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">Update clinical laboratory patient record</p>
+            </div>
+            <button 
+              onClick={() => setIsEditModalOpen(false)}
+              className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" 
+              type="button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            </button>
+          </div>
+          
+          <form onSubmit={handleEditSubmit} className="px-6 pb-6 pt-4 space-y-3 text-xs">
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Patient ID</label>
+                <input className="w-full h-9 px-3 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 font-mono text-xs cursor-not-allowed" disabled type="text" value={editForm.id || ''} />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Full Name <span className="text-rose-500">*</span></label>
+                <input 
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600" 
+                  required type="text" 
+                  value={editForm.name || ''} 
+                  onChange={e => setEditForm({...editForm, name: e.target.value})} 
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Age (Yrs) <span className="text-rose-500">*</span></label>
+                <input 
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600" 
+                  max="120" min="0" required type="number" 
+                  value={parseInt(editForm.age) || ''} 
+                  onChange={e => setEditForm({...editForm, age: e.target.value})} 
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Gender <span className="text-rose-500">*</span></label>
+                <FormSelect 
+                  value={editForm.gender || ''} 
+                  onChange={val => setEditForm({...editForm, gender: val})}
+                  required={true}
+                  options={[
+                    { value: '', label: 'Select' },
+                    { value: 'Male', label: 'Male' },
+                    { value: 'Female', label: 'Female' },
+                    { value: 'Other', label: 'Other' }
+                  ]} 
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Blood <span className="text-rose-500">*</span></label>
+                <FormSelect 
+                  value={editForm.blood || ''} 
+                  onChange={val => setEditForm({...editForm, blood: val})}
+                  required={true}
+                  options={[
+                    { value: '', label: 'Select' },
+                    { value: 'A+', label: 'A+' },
+                    { value: 'A-', label: 'A-' },
+                    { value: 'B+', label: 'B+' },
+                    { value: 'B-', label: 'B-' },
+                    { value: 'AB+', label: 'AB+' },
+                    { value: 'AB-', label: 'AB-' },
+                    { value: 'O+', label: 'O+' },
+                    { value: 'O-', label: 'O-' }
+                  ]} 
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Weight</label>
+                <input 
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600" 
+                  type="text" 
+                  value={editForm.weight || ''} 
+                  onChange={e => setEditForm({...editForm, weight: e.target.value})} 
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Contact Number <span className="text-rose-500">*</span></label>
+                <input 
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600" 
+                  required type="tel" 
+                  value={editForm.contact || ''} 
+                  onChange={e => setEditForm({...editForm, contact: e.target.value})} 
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Email <span className="text-slate-400 font-normal">(Optional)</span></label>
+                <input 
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600" 
+                  type="email" 
+                  value={editForm.email || ''} 
+                  onChange={e => setEditForm({...editForm, email: e.target.value})} 
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Full Address</label>
+              <textarea 
+                className="w-full min-h-[60px] p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600 resize-y" 
+                value={editForm.address || ''} 
+                onChange={e => setEditForm({...editForm, address: e.target.value})} 
+              ></textarea>
+            </div>
+            
+            <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
+              <button 
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold transition-colors" 
+                type="button"
+              >
+                Cancel
+              </button>
+              <button 
+                className="px-5 py-2 bg-[#0d9488] hover:bg-teal-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 flex items-center gap-1.5" 
+                type="submit"
+              >
+                <span>Save Changes</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };
@@ -443,6 +589,16 @@ export default function Patients() {
       cases: '5 Cases', active: true, date: '14 Sep 2026'
     }
   ]);
+
+  const updatePatient = (updatedPatient) => {
+    setPatients(patients.map(p => p.id === updatedPatient.id ? updatedPatient : p));
+    setSelectedPatient(updatedPatient);
+    
+    // Show toast for feedback
+    setToastMessage({ title: 'Patient Updated', desc: `${updatedPatient.name}'s information has been successfully updated.` });
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
 
   const handleRowClick = (patient) => {
     setSelectedPatient(patient);
@@ -507,7 +663,7 @@ export default function Patients() {
   });
 
   if (selectedPatient) {
-    return <PatientProfile patient={selectedPatient} onBack={() => setSelectedPatient(null)} />;
+    return <PatientProfile patient={selectedPatient} onBack={() => setSelectedPatient(null)} onUpdatePatient={updatePatient} />;
   }
 
   return (
