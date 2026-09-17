@@ -43,6 +43,52 @@ const CustomSelect = ({ value, onChange, options }) => {
   );
 };
 
+const FormSelect = ({ value, onChange, options, name, required }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      {name && <input type="hidden" name={name} value={value} required={required} />}
+      <div 
+        className={`w-full h-9 px-3 bg-slate-50 border ${isOpen ? 'border-teal-600 ring-1 ring-teal-600 bg-white' : 'border-slate-200'} rounded-lg ${value === '' ? 'text-slate-500' : 'text-slate-900'} text-xs flex items-center justify-between cursor-pointer transition-all`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="truncate">{options.find(o => o.value === value)?.label || 'Select'}</span>
+        <svg className={`w-4 h-4 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </div>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg z-[110] py-1">
+          {options.map(opt => (
+            <div 
+              key={opt.value}
+              className={`px-3 py-2 text-xs cursor-pointer transition-colors ${value === opt.value ? 'bg-teal-50 text-teal-700 font-semibold' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'} ${opt.value === '' ? 'text-slate-400 italic' : ''}`}
+              onClick={() => {
+                if(opt.value !== '') {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }
+              }}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function Patients() {
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodFilter, setBloodFilter] = useState('ALL');
@@ -56,6 +102,9 @@ export default function Patients() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState({ title: '', desc: '' });
+  
+  const [formGender, setFormGender] = useState('');
+  const [formBloodGroup, setFormBloodGroup] = useState('');
 
   const [patients, setPatients] = useState([
     {
@@ -135,6 +184,10 @@ export default function Patients() {
 
     setPatients([newPatient, ...patients]);
     setIsModalOpen(false);
+    
+    // Reset form state
+    setFormGender('');
+    setFormBloodGroup('');
     
     setToastMessage({ title: 'Patient Record Created', desc: 'P-1028 (' + name + ') registered successfully.' });
     setShowToast(true);
@@ -574,26 +627,38 @@ export default function Patients() {
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Gender <span className="text-rose-500">*</span></label>
-                <select name="formGender" className="w-full h-9 px-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600" required defaultValue="">
-                  <option disabled value="">Select</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
+                <FormSelect 
+                  name="formGender" 
+                  value={formGender} 
+                  onChange={setFormGender}
+                  required={true}
+                  options={[
+                    { value: '', label: 'Select' },
+                    { value: 'Male', label: 'Male' },
+                    { value: 'Female', label: 'Female' },
+                    { value: 'Other', label: 'Other' }
+                  ]} 
+                />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Blood <span className="text-rose-500">*</span></label>
-                <select name="formBloodGroup" className="w-full h-9 px-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600" required defaultValue="">
-                  <option disabled value="">Select</option>
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                  <option value="O+">O+</option>
-                  <option value="O-">O-</option>
-                </select>
+                <FormSelect 
+                  name="formBloodGroup" 
+                  value={formBloodGroup} 
+                  onChange={setFormBloodGroup}
+                  required={true}
+                  options={[
+                    { value: '', label: 'Select' },
+                    { value: 'A+', label: 'A+' },
+                    { value: 'A-', label: 'A-' },
+                    { value: 'B+', label: 'B+' },
+                    { value: 'B-', label: 'B-' },
+                    { value: 'AB+', label: 'AB+' },
+                    { value: 'AB-', label: 'AB-' },
+                    { value: 'O+', label: 'O+' },
+                    { value: 'O-', label: 'O-' }
+                  ]} 
+                />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Weight (kg)</label>
