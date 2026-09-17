@@ -89,6 +89,307 @@ const FormSelect = ({ value, onChange, options, name, required }) => {
   );
 };
 
+const PatientProfile = ({ patient, onBack }) => {
+  return (
+    <div className="flex flex-col w-full max-w-7xl mx-auto space-y-6 pb-10">
+      {/* Top Breadcrumb & Actions Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          {/* Breadcrumb navigation */}
+          <nav className="flex items-center gap-2 text-slate-500 text-xs font-semibold">
+            <button onClick={onBack} className="hover:text-teal-600 transition-colors flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px]">group</span>
+              <span>Patients</span>
+            </button>
+            <span className="text-slate-300 font-mono">/</span>
+            <span className="text-slate-900 font-semibold font-mono">{patient.id}</span>
+          </nav>
+          <div className="flex items-baseline gap-3 mt-1">
+            <h1 className="text-[28px] font-semibold text-slate-900 tracking-tight leading-tight">PATIENT PROFILE</h1>
+            <span className="px-2.5 py-0.5 rounded bg-teal-50 border border-teal-100 text-teal-700 font-mono text-[11px] font-semibold uppercase tracking-wider">{patient.active ? 'Active Record' : 'Inactive Record'}</span>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">Overview of patient demographics, current active case, and diagnostic history.</p>
+        </div>
+        {/* Action Button */}
+        <div className="flex items-center gap-3">
+          <button className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0d9488] hover:bg-teal-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2" type="button">
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            <span>New Case</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Layout Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Patient Demographics & Baseline Info (7 cols) */}
+        <div className="lg:col-span-7 bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 flex flex-col gap-6">
+          {/* Section Header */}
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-teal-600">
+                <span className="material-symbols-outlined text-[22px]">badge</span>
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Patient Information</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Verified master patient index record</p>
+              </div>
+            </div>
+            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold transition-colors" type="button">
+              <span className="material-symbols-outlined text-[16px]">edit</span>
+              <span>Edit Patient</span>
+            </button>
+          </div>
+
+          {/* Unified Patient Identity Header */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pb-2">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 text-teal-700 flex items-center justify-center text-xl font-bold shrink-0">
+                {patient.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold text-slate-900">{patient.name}</span>
+                  <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[11px] font-semibold">{patient.id}</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">Registered {patient.date} • {patient.gender} • {patient.age} yrs</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Blood Group</span>
+                <span className="inline-flex items-center justify-center px-2.5 py-1 mt-0.5 rounded border border-rose-200/60 bg-rose-50 text-rose-600 font-mono text-sm font-bold">
+                  {patient.blood}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Clean Structured Key-Value Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-5 gap-x-6 py-4 border-t border-b border-slate-100">
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Full Name</span>
+              <span className="text-xs font-semibold text-slate-900">{patient.name}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Patient ID</span>
+              <span className="font-mono text-xs font-bold text-teal-700">{patient.id}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Age</span>
+              <span className="text-xs font-semibold text-slate-900">{patient.age} yrs</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Gender</span>
+              <span className="text-xs font-semibold text-slate-900">{patient.gender}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Weight</span>
+              <span className="text-xs font-semibold text-slate-900">{patient.weight}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Contact Number</span>
+              <span className="font-mono text-xs font-semibold text-slate-900">{patient.contact}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Address</span>
+              <span className="text-xs font-semibold text-slate-900 truncate pr-2" title={patient.address}>{patient.address}</span>
+            </div>
+          </div>
+
+          {/* Clinical Notes Section */}
+          <div className="flex flex-col gap-2 pt-1">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px] text-slate-400">notes</span>
+              <span className="text-xs font-semibold text-slate-900">Clinical Baseline Notes</span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-700 text-xs flex items-start gap-2.5">
+              <span className="material-symbols-outlined text-[16px] text-teal-600 shrink-0 mt-0.5">info</span>
+              <p className="leading-relaxed">Routine hematology evaluation. Patient referred for automated smear screening following mild constitutional fatigue.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Current Case Spotlight (5 cols) */}
+        <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 flex flex-col gap-5 relative overflow-hidden">
+          {/* Top Visual Accent Strip */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#0d9488]"></div>
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="flex h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse"></span>
+                <span className="text-[10px] font-bold tracking-wider uppercase text-teal-700">Active Diagnostic Workflow</span>
+              </div>
+              <h2 className="text-base font-bold text-slate-900">CURRENT CASE</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Latest laboratory specimen under processing</p>
+            </div>
+            <span className="px-2 py-1 rounded border border-slate-200 bg-slate-50 font-mono text-[10px] font-semibold text-slate-600">
+              06 Sep 2026
+            </span>
+          </div>
+          {/* Case Identity Box */}
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Case Accession ID</span>
+                <span className="font-mono text-sm font-bold text-slate-900">CS-1024</span>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Sample ID</span>
+                <span className="font-mono text-xs font-semibold text-slate-700">S-1024</span>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-slate-200/60 mt-1">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Test Requested</span>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="material-symbols-outlined text-[16px] text-teal-600">biotech</span>
+                <span className="text-xs font-semibold text-slate-900">Blood Smear (Peripheral Blood Smear)</span>
+              </div>
+            </div>
+          </div>
+          {/* Multi-Stage Status Overview */}
+          <div className="flex flex-col gap-2.5">
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Workflow Stage Status</span>
+            <div className="flex flex-col gap-2">
+              {/* Stage 1: AI Analysis */}
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-teal-600">neurology</span>
+                  <span className="text-xs font-semibold text-slate-800">AI Morphology Analysis</span>
+                </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-emerald-200/60 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase">
+                  <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                  <span>Completed</span>
+                </span>
+              </div>
+              {/* Stage 2: Expert Review */}
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-slate-400">clinical_notes</span>
+                  <span className="text-xs font-semibold text-slate-800">Expert Pathologist Review</span>
+                </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-amber-200/60 bg-amber-50 text-amber-700 text-[10px] font-bold uppercase">
+                  <span className="material-symbols-outlined text-[12px]">schedule</span>
+                  <span>Pending</span>
+                </span>
+              </div>
+              {/* Stage 3: Final Report */}
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-slate-400">description</span>
+                  <span className="text-xs font-semibold text-slate-800">Diagnostic Report</span>
+                </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-200 bg-slate-100 text-slate-500 text-[10px] font-bold uppercase">
+                  <span>Not Generated</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          {/* Hint block */}
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-teal-50/50 border border-teal-100/50 text-teal-800 text-[11px] leading-relaxed">
+            <span className="material-symbols-outlined text-[14px] text-teal-600 shrink-0 mt-0.5">lightbulb</span>
+            <p>Full digital smear fields, morphologic tiles, and differential classification are accessible within the Case Workspace.</p>
+          </div>
+          {/* Primary Action Callout */}
+          <div className="pt-2">
+            <button className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#0d9488] hover:bg-teal-700 text-white text-xs font-semibold transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2" type="button">
+              <span>View Case Workspace</span>
+              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 3: Case History Table */}
+      <div className="w-full bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">CASE HISTORY</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Chronological archive of patient laboratory cases and verification outcomes</p>
+          </div>
+          <div className="flex items-center gap-2 font-mono text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg self-start sm:self-auto">
+            <span>3 Recorded Accessions</span>
+          </div>
+        </div>
+        {/* Historical Table Container */}
+        <div className="w-full overflow-x-auto rounded-xl border border-slate-200/70 bg-white">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <th className="py-3 px-4" scope="col">Date</th>
+                <th className="py-3 px-4" scope="col">Case ID</th>
+                <th className="py-3 px-4" scope="col">Test Type</th>
+                <th className="py-3 px-4" scope="col">Key Finding</th>
+                <th className="py-3 px-4" scope="col">Status</th>
+                <th className="py-3 px-4 text-right" scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+              {/* Row 1 */}
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">06 Sep 2026</td>
+                <td className="py-3.5 px-4 font-mono font-semibold text-teal-700 whitespace-nowrap">CS-1024</td>
+                <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-900">Blood Smear</td>
+                <td className="py-3.5 px-4 text-slate-700">Abnormal cell pattern</td>
+                <td className="py-3.5 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200/60">
+                    <span className="material-symbols-outlined text-[12px]">schedule</span>
+                    <span>Review Required</span>
+                  </span>
+                </td>
+                <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                  <button className="inline-flex items-center gap-1 text-teal-600 font-semibold hover:underline text-xs" type="button">
+                    <span>View Case</span>
+                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  </button>
+                </td>
+              </tr>
+              {/* Row 2 */}
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">02 Aug 2026</td>
+                <td className="py-3.5 px-4 font-mono font-semibold text-slate-900 whitespace-nowrap">CS-0945</td>
+                <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">Blood Smear</td>
+                <td className="py-3.5 px-4 text-slate-600">Mild anisocytosis</td>
+                <td className="py-3.5 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                    <span className="material-symbols-outlined text-[12px]">done_all</span>
+                    <span>Reviewed</span>
+                  </span>
+                </td>
+                <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                  <button className="inline-flex items-center gap-1 text-slate-500 hover:text-teal-600 font-semibold transition-colors text-xs" type="button">
+                    <span>View Report</span>
+                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                  </button>
+                </td>
+              </tr>
+              {/* Row 3 */}
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">10 Jul 2026</td>
+                <td className="py-3.5 px-4 font-mono font-semibold text-slate-900 whitespace-nowrap">CS-0891</td>
+                <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">CBC</td>
+                <td className="py-3.5 px-4 text-slate-600">No significant abnormality</td>
+                <td className="py-3.5 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                    <span className="material-symbols-outlined text-[12px]">verified</span>
+                    <span>Verified</span>
+                  </span>
+                </td>
+                <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                  <button className="inline-flex items-center gap-1 text-slate-500 hover:text-teal-600 font-semibold transition-colors text-xs" type="button">
+                    <span>View Report</span>
+                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Patients() {
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodFilter, setBloodFilter] = useState('ALL');
@@ -96,7 +397,6 @@ export default function Patients() {
   const [caseStatusFilter, setCaseStatusFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('ALL');
   
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -146,7 +446,6 @@ export default function Patients() {
 
   const handleRowClick = (patient) => {
     setSelectedPatient(patient);
-    setIsDrawerOpen(true);
   };
 
   const clearFilters = () => {
@@ -206,6 +505,10 @@ export default function Patients() {
     
     return matchesQuery && matchesBlood && matchesGender && matchesCase;
   });
+
+  if (selectedPatient) {
+    return <PatientProfile patient={selectedPatient} onBack={() => setSelectedPatient(null)} />;
+  }
 
   return (
     <div className="space-y-6 flex-1 max-w-7xl w-full mx-auto pb-10">
@@ -451,137 +754,6 @@ export default function Patients() {
           </div>
         </div>
       </div>
-
-      {/* Patient Profile Drawer */}
-      <div 
-        className={`fixed inset-0 bg-slate-900/40 z-[90] backdrop-blur-sm transition-opacity duration-200 ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
-        onClick={() => setIsDrawerOpen(false)}
-      ></div>
-      <aside 
-        className={`fixed top-0 right-0 bottom-0 w-full max-w-xl bg-white shadow-2xl z-[100] transform transition-transform duration-300 ease-in-out flex flex-col ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
-      >
-        <div className="p-6 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-teal-50 border border-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm shrink-0">
-              {selectedPatient ? selectedPatient.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : ''}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-semibold text-slate-900">{selectedPatient?.name}</h3>
-                <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200/60">{selectedPatient?.id}</span>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">{selectedPatient?.age} yrs · {selectedPatient?.gender} · Blood Group {selectedPatient?.blood}</p>
-            </div>
-          </div>
-          <button 
-            onClick={() => setIsDrawerOpen(false)}
-            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
-          </button>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs text-slate-600">
-          <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
-            <div>
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Phone Contact</span>
-              <span className="font-mono text-xs text-slate-800 font-medium">{selectedPatient?.contact}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Registration Date</span>
-              <span className="font-mono text-xs text-slate-800 font-medium">{selectedPatient?.date}</span>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Current Active Case</span>
-              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2 py-0.5 rounded-full">In AI Analysis</span>
-            </div>
-            <div className="border border-slate-200/80 rounded-xl p-4 bg-white space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-slate-900">Case #CAS-2026-0894</span>
-                  <p className="text-[11px] text-slate-400">Peripheral Blood Smear (100x Oil Immersion)</p>
-                </div>
-                <button className="px-2.5 py-1 bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 rounded text-xs font-semibold transition-colors">
-                  Open Smear
-                </button>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 space-y-2">
-                <div className="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-teal-600"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path><path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle></svg>
-                  <span>AI Morphological Differential</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-white p-2 rounded border border-slate-200/60">
-                    <span className="text-[10px] text-slate-400 block">Normocytes</span>
-                    <span className="font-mono font-bold text-slate-800 text-xs">84.2%</span>
-                  </div>
-                  <div className="bg-white p-2 rounded border border-slate-200/60">
-                    <span className="text-[10px] text-slate-400 block">Hypochromic</span>
-                    <span className="font-mono font-bold text-amber-600 text-xs">11.8%</span>
-                  </div>
-                  <div className="bg-white p-2 rounded border border-slate-200/60">
-                    <span className="text-[10px] text-slate-400 block">Target Cells</span>
-                    <span className="font-mono font-bold text-slate-800 text-xs">4.0%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2.5">Case History & Reports</span>
-            <div className="border border-slate-200/80 rounded-xl divide-y divide-slate-100 overflow-hidden bg-white">
-              <div className="p-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="m9 15 2 2 4-4"></path></svg>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-800 text-xs block">CAS-2026-0412 · Complete Hemogram</span>
-                    <span className="text-[11px] text-slate-400">Verified by Dr. Evelyn Vance · 14 May 2026</span>
-                  </div>
-                </div>
-                <span className="text-xs text-teal-700 font-semibold cursor-pointer hover:underline">Download PDF</span>
-              </div>
-              <div className="p-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="m9 15 2 2 4-4"></path></svg>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-800 text-xs block">CAS-2025-1108 · Routine Smear AI Screen</span>
-                    <span className="text-[11px] text-slate-400">Verified by Dr. Evelyn Vance · 20 Nov 2025</span>
-                  </div>
-                </div>
-                <span className="text-xs text-teal-700 font-semibold cursor-pointer hover:underline">Download PDF</span>
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Clinical Indication / Lab Notes</span>
-            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/70 text-slate-600 text-xs leading-relaxed">
-              Referred for mild fatigue and pallor examination. High-magnification blood film prepared via Wright-Giemsa staining. Standard RBC indices differential scheduled.
-            </div>
-          </div>
-        </div>
-        <div className="p-4 border-t border-slate-200 bg-white flex items-center justify-end gap-2.5">
-          <button 
-            onClick={() => setIsDrawerOpen(false)}
-            className="px-3.5 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors" 
-            type="button"
-          >
-            Close Drawer
-          </button>
-          <button className="px-4 py-2 rounded-lg bg-[#0d9488] hover:bg-teal-700 text-white text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5" type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path><path d="M12 8v8"></path></svg>
-            <span>Create New Case For Patient</span>
-          </button>
-        </div>
-      </aside>
 
       {/* New Patient Modal */}
       <div 
