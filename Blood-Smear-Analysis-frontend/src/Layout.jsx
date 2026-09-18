@@ -102,7 +102,6 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
                     <span className="material-symbols-outlined text-[18px]">fact_check</span>
                     <span className="font-body-md text-body-md">Review Queue</span>
                   </div>
-                  <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200/60 rounded">12</span>
                 </a>
               </div>
             </div>
@@ -110,7 +109,11 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
             <div>
               <div className="px-space-md py-space-xs font-label-sm text-label-sm uppercase tracking-wider text-outline font-medium">Reporting</div>
               <div className="mt-space-xs space-y-0.5">
-                <a href="#" className="flex items-center justify-between px-space-md py-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
+                <a 
+                  href="#" 
+                  onClick={(e) => { e.preventDefault(); onNavigate('reports'); }}
+                  className={`flex items-center justify-between px-space-md py-2 transition-colors rounded-xl ${currentView === 'reports' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}`}
+                >
                   <div className="flex items-center gap-space-md">
                     <span className="material-symbols-outlined text-[18px]">description</span>
                     <span className="font-body-md text-body-md">Reports</span>
@@ -118,6 +121,7 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
                 </a>
               </div>
             </div>
+
           </nav>
         </div>
         

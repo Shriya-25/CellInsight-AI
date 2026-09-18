@@ -7,6 +7,7 @@ import ImageAnalysis from "./ImageAnalysis.jsx";
 import Patients from "./Patients.jsx";
 import Cases from "./Cases.jsx";
 import ReviewQueue from "./ReviewQueue.jsx";
+import Reports from "./Reports.jsx";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -58,6 +59,7 @@ function App() {
       {currentView === 'patients' && <Patients />}
       {currentView === 'cases' && <Cases initialCase={initialCase} />}
       {currentView === 'review-queue' && <ReviewQueue />}
+      {currentView === 'reports' && <Reports />}
     </Layout>
   );
 }
