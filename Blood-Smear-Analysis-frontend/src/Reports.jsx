@@ -37,7 +37,7 @@ const CustomSelect = ({ value, onChange, options }) => {
   );
 };
 
-// ─── Report Preview Modal ──────────────────────────────────────────────────────
+// ─── Report Preview Modal (Clinical Template) ─────────────────────────────────
 const ReportModal = ({ report, onClose }) => {
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
@@ -47,178 +47,299 @@ const ReportModal = ({ report, onClose }) => {
 
   if (!report) return null;
 
-  const isPending = report.status === 'Pending Approval';
+  // Per-report data derived from the report object
+  const sampleId  = `S-${report.caseId.replace('CS-', '')}`;
+  const reportNum = report.id;
+  const caseId    = report.caseId;
+
+  // Static clinical data (in a real system this would come from an API)
+  const patientMeta = {
+    age: '32 Years / Male',
+    referredBy: 'Dr. S. Kulkarni',
+    sampleType: 'Peripheral Blood Smear',
+    collectionDate: `${report.date}, 10:22 AM`,
+    reportDate: `${report.date}, 04:55 PM`,
+  };
+
+  const analysisSummary = [
+    { label: 'No. of Images Analysed', value: '3' },
+    { label: 'Image Quality',           value: 'Good' },
+    { label: 'AI Model Version',        value: 'YOLOv8 + EfficientNet v1.2' },
+    { label: 'Analysis Time',           value: '2.8 seconds' },
+  ];
+
+  const cellCounts = [
+    { param: 'Red Blood Cells (RBC)',   count: 148, pct: '78.7', ref: '—' },
+    { param: 'White Blood Cells (WBC)', count: 12,  pct: '6.4',  ref: '—' },
+    { param: 'Platelets',               count: 28,  pct: '14.9', ref: '—' },
+  ];
+
+  const wbcDiff = [
+    { type: 'Neutrophils',  count: 5, pct: '41.7' },
+    { type: 'Lymphocytes',  count: 3, pct: '25.0' },
+    { type: 'Monocytes',    count: 2, pct: '16.7' },
+    { type: 'Eosinophils',  count: 1, pct: '8.3'  },
+    { type: 'Basophils',    count: 1, pct: '8.3'  },
+  ];
+
+  const reviewSummary = [
+    { label: 'Cells Accepted',          value: 174 },
+    { label: 'Cells Modified',          value: 10  },
+    { label: 'Cells Marked Unknown',    value: 4   },
+    { label: 'Cells Flagged for Review',value: 2   },
+  ];
+
+  const remarks = [
+    'Overall smear quality is good.',
+    'Normal RBC morphology observed.',
+    'WBC count appears within expected range.',
+    'Platelet count is adequate.',
+    'No significant abnormal morphology detected.',
+    'Please correlate with clinical findings and other laboratory parameters.',
+  ];
+
+  const thCls  = 'border border-slate-300 px-3 py-2 text-left text-[11px] font-bold text-slate-700 bg-slate-100 uppercase tracking-wide';
+  const tdCls  = 'border border-slate-300 px-3 py-2 text-xs text-slate-700';
+  const secHdr = 'bg-slate-100 border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide';
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
-        {/* Modal Header */}
-        <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-100">
-              <span className="material-symbols-outlined text-[20px]">lab_profile</span>
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-slate-900">Clinical Laboratory Report — {report.id}</h2>
-              <p className="text-[11px] text-slate-500 font-medium">Specimen Accession: S-{report.caseId.replace('CS-', '')}-EDTA</p>
-            </div>
-          </div>
+      <div className="bg-white shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col overflow-hidden border border-slate-300 rounded-lg">
+
+        {/* ── Modal chrome: Print + Close ────────────────────────────────── */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200 shrink-0">
+          <span className="text-xs font-semibold text-slate-600">Report Preview — {reportNum}</span>
           <div className="flex items-center gap-2">
             <button
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#0d9488] hover:bg-teal-700 rounded-lg transition shadow-sm"
               onClick={() => window.print()}
               type="button"
             >
-              <span className="material-symbols-outlined text-[15px]">print</span>
-              Print / Export PDF
+              <span className="material-symbols-outlined text-[14px]">print</span>Print / Export PDF
             </button>
             <button
               className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
               onClick={onClose}
               type="button"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5 bg-white">
-          {/* Status Banner */}
-          <div className={`p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${isPending ? 'bg-sky-50 text-sky-700 border border-sky-200/60' : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'}`}>
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">{isPending ? 'pending_actions' : 'verified'}</span>
-              <span className="text-xs font-semibold">{isPending ? 'Pending Pathologist Verification • Version 1.0 (Draft Sign-off)' : `Approved • ${report.version} — Verified & Signed`}</span>
-            </div>
-            <span className="font-mono text-[11px] text-slate-500">Generated: {report.date}, 14:30 IST</span>
-          </div>
+        {/* ── Printable clinical document ─────────────────────────────────── */}
+        <div className="overflow-y-auto flex-1 bg-white" style={{ fontFamily: 'Georgia, serif' }}>
+          <div className="px-8 py-6 space-y-0" style={{ fontSize: '12px', color: '#1e293b' }}>
 
-          {/* Patient & Case Info */}
-          <div className="bg-slate-50 p-5 rounded-xl border border-slate-200/70">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Patient Details</div>
-                <p className="text-base font-bold text-slate-900">{report.patient}</p>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1.5">
-                  <span>ID: <strong className="text-slate-700 font-mono">{report.patientId}</strong></span>
-                  <span>•</span><span>32 yrs / Male</span>
-                  <span>•</span><span>Blood Group: <strong className="text-slate-700">B+</strong></span>
+            {/* ── LAB LETTERHEAD ─────────────────────────────────────────── */}
+            <div className="flex items-start justify-between pb-4 border-b-2 border-slate-800 mb-0">
+              <div className="flex items-start gap-4">
+                {/* Microscope icon */}
+                <div className="w-14 h-14 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[48px] text-slate-700">biotech</span>
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900 leading-tight" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    CellInsight Diagnostic Laboratory
+                  </h1>
+                  <p className="text-[11px] text-slate-500 italic">Accurate Diagnosis. Better Care.</p>
+                  <p className="text-[11px] text-slate-600 mt-1">123 Shivajinagar, Pune, Maharashtra - 411005</p>
+                  <p className="text-[11px] text-slate-600">+91 98765 43210 &nbsp;|&nbsp; lab@cellinsightlab.com &nbsp;|&nbsp; www.cellinsightlab.com</p>
                 </div>
               </div>
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Case & Specimen Specs</div>
-                <div className="grid grid-cols-2 gap-1.5 text-xs text-slate-500">
-                  <div>Case ID: <span className="text-slate-800 font-mono font-semibold">{report.caseId}</span></div>
-                  <div>Sample ID: <span className="text-slate-800 font-mono">S-{report.caseId.replace('CS-', '')}</span></div>
-                  <div>Specimen: <span className="text-slate-800">Whole Blood K2-EDTA</span></div>
-                  <div>Stain: <span className="text-slate-800">Wright-Giemsa</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Acquisition Metrics */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white border border-slate-200/80 rounded-xl shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-100">
-                <span className="material-symbols-outlined text-[22px]">biotech</span>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Acquisition Metrics</div>
-                <p className="text-sm font-semibold text-slate-900">5 High-Power Fields (HPF) Analyzed</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Image Quality:</span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200/60">
-                <span className="material-symbols-outlined text-[14px]">check_circle</span>Optimal / Good Quality (Diagnostic Grade)
-              </span>
-            </div>
-          </div>
-
-          {/* Cytology & WBC Differential */}
-          <div className="space-y-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Verified Quantitative Cytology & WBC Differential</div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[['Total Nucleated Scanned','482'],['RBC Morphology Count','389'],['WBC Total Analyzed','78'],['Platelet Aggregates','15']].map(([k,v]) => (
-                <div key={k} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <div className="text-[11px] text-slate-500 font-medium leading-tight">{k}</div>
-                  <div className="text-xl font-bold text-slate-900 font-mono mt-1">{v}</div>
-                </div>
-              ))}
-            </div>
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/70 space-y-3">
-              {[
-                { label: 'Segmented Neutrophils', pct: 42, ref: '40–70%', alert: null, color: 'bg-teal-600' },
-                { label: 'Lymphocytes', pct: 18, ref: '20–40%', alert: null, color: 'bg-teal-600' },
-                { label: 'Monocytes', pct: 8, ref: '2–8%', alert: null, color: 'bg-teal-600' },
-                { label: 'Eosinophils', pct: 6, ref: '1–4%', alert: 'High', color: 'bg-sky-500' },
-                { label: 'Basophils', pct: 2, ref: '0.5–1%', alert: null, color: 'bg-teal-600' },
-                { label: 'Myeloblasts / Atypical', pct: 2, ref: '0%', alert: 'Alert', color: 'bg-rose-500', error: true },
-              ].map(row => (
-                <div key={row.label} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className={`font-medium flex items-center gap-1.5 ${row.error ? 'text-rose-600' : 'text-slate-800'}`}>
-                      {row.label}
-                      {row.alert && <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${row.error ? 'bg-rose-50 text-rose-600 border border-rose-200/60' : 'bg-sky-50 text-sky-600 border border-sky-200/60'}`}>[{row.alert}]</span>}
-                    </span>
-                    <span className={`font-mono ${row.error ? 'text-rose-600 font-semibold' : 'text-slate-700'}`}>{row.pct}% (Ref: {row.ref})</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                    <div className={`h-full ${row.color} rounded-full`} style={{ width: `${row.pct}%` }}></div>
+              <div className="text-right shrink-0 ml-4">
+                <table className="text-[11px] text-slate-700">
+                  <tbody>
+                    {[
+                      ['Sample ID',      sampleId],
+                      ['Case ID',        caseId],
+                      ['Report Date',    patientMeta.reportDate],
+                      ['Report Version', report.version || 'v1'],
+                    ].map(([k, v]) => (
+                      <tr key={k}>
+                        <td className="pr-2 font-medium text-slate-500 whitespace-nowrap">{k}</td>
+                        <td className="pr-1 text-slate-500">:</td>
+                        <td className="font-semibold text-slate-800 whitespace-nowrap">{v}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="mt-3 text-right">
+                  <div className="inline-block bg-slate-800 text-white px-2.5 py-1 rounded text-[10px] font-bold leading-tight text-right">
+                    <div>Powered by <span className="text-teal-300">CellInsight</span></div>
+                    <div className="font-normal opacity-80">AI-Assisted Analysis Platform</div>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
 
-          {/* Diagnostic Findings */}
-          <div className="space-y-2">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Verified Diagnostic Findings & Review Summary</div>
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/70 text-xs text-slate-700 leading-relaxed">
-              <strong>Morphological Evaluation:</strong> Mild anisocytosis and polychromasia observed in peripheral blood film. Presence of 2 atypical mononuclear blast-like cells in Field 3 flagged for definitive pathologist microscopic confirmation.
+            {/* ── REPORT TITLE ────────────────────────────────────────────── */}
+            <div className="py-3 border-b border-slate-300">
+              <h2 className="text-base font-bold text-slate-900 tracking-wide uppercase" style={{ fontFamily: 'Arial, sans-serif', letterSpacing: '0.03em' }}>
+                Peripheral Blood Smear Analysis Report
+              </h2>
             </div>
-          </div>
 
-          {/* Reviewer Sign-off */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-4 bg-white border border-slate-200/80 rounded-xl shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-sm">EV</div>
+            {/* ── PATIENT INFORMATION ─────────────────────────────────────── */}
+            <div className="mt-3">
+              <div className={secHdr}>Patient Information</div>
+              <div className="border border-slate-300 border-t-0 px-3 py-3 grid grid-cols-2 gap-x-8 gap-y-1.5">
+                <div>
+                  {[
+                    ['Patient ID',   report.patientId],
+                    ['Patient Name', report.patient],
+                    ['Age / Sex',    patientMeta.age],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex gap-2 text-[11px] py-0.5">
+                      <span className="w-24 text-slate-500 shrink-0">{k}</span>
+                      <span className="text-slate-400 shrink-0">:</span>
+                      <span className="font-medium text-slate-800">{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  {[
+                    ['Referred By',      patientMeta.referredBy],
+                    ['Sample Type',      patientMeta.sampleType],
+                    ['Collection Date',  patientMeta.collectionDate],
+                    ['Report Date',      patientMeta.reportDate],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex gap-2 text-[11px] py-0.5">
+                      <span className="w-28 text-slate-500 shrink-0">{k}</span>
+                      <span className="text-slate-400 shrink-0">:</span>
+                      <span className="font-medium text-slate-800">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* ── ANALYSIS SUMMARY ────────────────────────────────────────── */}
+            <div className="mt-4">
+              <div className={secHdr}>Analysis Summary</div>
+              <div className="border border-slate-300 border-t-0 px-3 py-2.5 space-y-1">
+                {analysisSummary.map(({ label, value }) => (
+                  <div key={label} className="flex gap-2 text-[11px]">
+                    <span className="w-44 text-slate-500 shrink-0">{label}</span>
+                    <span className="text-slate-400 shrink-0">:</span>
+                    <span className="font-medium text-slate-800">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── CELL COUNT SUMMARY TABLE ─────────────────────────────────── */}
+            <div className="mt-4">
+              <div className={secHdr}>Cell Count Summary (AI + Verified)</div>
+              <table className="w-full border-collapse border border-slate-300 border-t-0">
+                <thead>
+                  <tr>
+                    <th className={thCls}>Parameter</th>
+                    <th className={`${thCls} text-center`}>Count (per field)</th>
+                    <th className={`${thCls} text-center`}>Percentage (%)</th>
+                    <th className={`${thCls} text-center`}>Reference Range*</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cellCounts.map((row, i) => (
+                    <tr key={row.param} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                      <td className={tdCls}>{row.param}</td>
+                      <td className={`${tdCls} text-center`}>{row.count}</td>
+                      <td className={`${tdCls} text-center`}>{row.pct}</td>
+                      <td className={`${tdCls} text-center`}>{row.ref}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── WBC DIFFERENTIAL COUNT TABLE ────────────────────────────── */}
+            <div className="mt-4">
+              <div className={secHdr}>WBC Differential Count</div>
+              <table className="w-full border-collapse border border-slate-300 border-t-0">
+                <thead>
+                  <tr>
+                    <th className={thCls}>Cell Type</th>
+                    <th className={`${thCls} text-center`}>Count</th>
+                    <th className={`${thCls} text-center`}>Percentage (%)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {wbcDiff.map((row, i) => (
+                    <tr key={row.type} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                      <td className={tdCls}>{row.type}</td>
+                      <td className={`${tdCls} text-center`}>{row.count}</td>
+                      <td className={`${tdCls} text-center`}>{row.pct}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── REVIEW SUMMARY ───────────────────────────────────────────── */}
+            <div className="mt-4">
+              <div className={secHdr}>Review Summary</div>
+              <div className="border border-slate-300 border-t-0 px-3 py-2.5 space-y-1">
+                {reviewSummary.map(({ label, value }) => (
+                  <div key={label} className="flex gap-2 text-[11px]">
+                    <span className="w-44 text-slate-500 shrink-0">{label}</span>
+                    <span className="text-slate-400 shrink-0">:</span>
+                    <span className="font-semibold text-slate-800">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── REMARKS ─────────────────────────────────────────────────── */}
+            <div className="mt-4">
+              <div className={secHdr}>Remarks</div>
+              <div className="border border-slate-300 border-t-0 px-4 py-3">
+                <ul className="list-disc list-outside ml-4 space-y-1">
+                  {remarks.map((r, i) => (
+                    <li key={i} className="text-[11px] text-slate-700">{r}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* ── SIGN-OFF + DISCLAIMER ────────────────────────────────────── */}
+            <div className="mt-6 grid grid-cols-2 gap-8 items-start border-t border-slate-200 pt-5">
+              {/* Signature */}
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Reviewing Pathologist</div>
-                <p className="text-sm font-semibold text-slate-900">Dr. Evelyn Vance, MD</p>
-                <p className="text-[11px] text-slate-500">Chief Pathologist / Lab Director</p>
+                <p className="text-[11px] font-bold text-slate-700 mb-3">Reviewed &amp; Approved By</p>
+                <div className="mb-2 border-b border-slate-300 pb-1 w-44">
+                  <span
+                    style={{ fontFamily: "'Caveat', cursive", fontSize: '1.6rem', color: '#1e3a5f', display: 'block', lineHeight: 1.2 }}
+                  >
+                    Shriya Kulkarni
+                  </span>
+                </div>
+                <p className="text-[11px] font-bold text-slate-800">Dr. Shriya Kulkarni</p>
+                <p className="text-[11px] text-slate-600">Pathologist</p>
+                <p className="text-[11px] text-slate-600">Reg. No. MH-PATH-45871</p>
+              </div>
+              {/* Disclaimer */}
+              <div className="bg-slate-50 border border-slate-200 rounded p-3">
+                <p className="text-[11px] font-bold text-slate-800 mb-1.5">Disclaimer</p>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  This report is generated by CellInsight, an AI-assisted blood smear analysis system. It is a research prototype intended for laboratory assistance only and is not a standalone diagnostic device. Final interpretation and clinical correlation must be performed by a qualified healthcare professional.
+                </p>
               </div>
             </div>
-            {isPending ? (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 text-xs font-semibold border border-sky-200/60">
-                <span className="material-symbols-outlined text-[15px]">lock_clock</span>Awaiting final electronic PIN verification
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200/60">
-                <span className="material-symbols-outlined text-[15px]">verified</span>Signed & Approved
-              </div>
-            )}
-          </div>
 
-          {/* Disclaimer */}
-          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 text-[11px] text-slate-500 leading-relaxed">
-            <strong>DISCLAIMER:</strong> CellInsight Lab is an assistive diagnostic decision-support system. AI classifications require manual validation and sign-off by a certified clinical hematopathologist prior to EMR transmission.
+            {/* ── DOCUMENT FOOTER ─────────────────────────────────────────── */}
+            <div className="mt-6 pt-3 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-400">
+              <span>CellInsight Diagnostic Laboratory</span>
+              <span>Page 1 of 1</span>
+              <span>Printed on {patientMeta.reportDate}</span>
+            </div>
+
           </div>
         </div>
 
-        {/* Modal Footer */}
-        <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between shrink-0">
-          <span className="font-mono text-[11px] text-slate-400">Doc Hash: SHA256:7f9a2b...90d</span>
-          <button
-            className="px-4 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg transition shadow-sm"
-            onClick={onClose}
-            type="button"
-          >Close Preview</button>
-        </div>
       </div>
     </div>
   );
