@@ -27,3 +27,50 @@ button,
 input {
   font: inherit;
 }
+
+@media print {
+  /* Hide the entire app container and normal layout */
+  #root > * {
+    display: none !important;
+  }
+  
+  /* But make the modal wrapper visible and remove fixed positioning */
+  #root > div > .fixed.inset-0 {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Ensure the modal content container flows normally */
+  .fixed.inset-0 > div {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  /* Make sure the scrollable area expands fully */
+  .overflow-y-auto {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Adjust page margins for a perfect fit */
+  @page {
+    margin: 10mm;
+    size: A4 portrait;
+  }
+}
