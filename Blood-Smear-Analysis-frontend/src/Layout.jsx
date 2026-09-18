@@ -142,17 +142,21 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
         </div>
         
         <div className="p-space-md border-t border-surface-container-high">
-          <div className="flex items-center gap-space-md mb-space-sm">
-            <img 
-              alt={user?.name || "Dr. Evelyn Vance"} 
-              className="w-9 h-9 rounded-full object-cover bg-surface-container" 
-              src="https://lh3.googleusercontent.com/aida/AEtjO1VW63dPq8n7prItvQD-s-sT2XEb8Y1XbY6K7k56wpAnP32L5sungA2pZ_hcnRRQuHkfWnDu-Zj8ROxcJczDMir-Vwm-IOCyWnMfuVh2Vw1IqU1EGm_O39ahelJXN0zLe9P9XFcRdhv1w6pbVZ1Jj6vQVbGvWwYHmuRDqX1gXILoUX2WmQkNf9QO6agOGRO-4iDFZBSMzcvDtQJzYzzgyBYpmAl0OhAD8wvCgEa75N6bZTqh9h41LSgcUCA" 
-            />
+          <div
+            className="flex items-center gap-space-md mb-space-sm cursor-pointer hover:bg-surface-container rounded-xl px-space-sm py-space-xs transition-colors"
+            onClick={() => onNavigate('profile')}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="w-9 h-9 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center shrink-0 border border-teal-100">
+              SK
+            </div>
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="font-headline-sm text-body-sm font-semibold text-on-surface truncate">{user?.name || "Dr. Evelyn Vance"}</span>
-              <span className="font-label-sm text-label-sm text-secondary truncate">{user?.role || "Pathologist / Lab Dir"}</span>
+              <span className="font-headline-sm text-body-sm font-semibold text-on-surface truncate">Dr. Shriya Kulkarni</span>
+              <span className="font-label-sm text-label-sm text-secondary truncate">Pathologist</span>
             </div>
           </div>
+
           <div className="flex flex-col gap-1">
             <a 
               href="#"
