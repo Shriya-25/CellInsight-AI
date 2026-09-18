@@ -8,6 +8,8 @@ import Patients from "./Patients.jsx";
 import Cases from "./Cases.jsx";
 import ReviewQueue from "./ReviewQueue.jsx";
 import Reports from "./Reports.jsx";
+import Settings from "./Settings.jsx";
+import Profile from "./Profile.jsx";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -60,6 +62,8 @@ function App() {
       {currentView === 'cases' && <Cases initialCase={initialCase} />}
       {currentView === 'review-queue' && <ReviewQueue />}
       {currentView === 'reports' && <Reports />}
+      {currentView === 'settings' && <Settings />}
+      {currentView === 'profile' && <Profile />}
     </Layout>
   );
 }

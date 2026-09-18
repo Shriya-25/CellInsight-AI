@@ -122,6 +122,22 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
               </div>
             </div>
 
+            <div>
+              <div className="px-space-md py-space-xs font-label-sm text-label-sm uppercase tracking-wider text-outline font-medium">Account</div>
+              <div className="mt-space-xs space-y-0.5">
+                <a 
+                  href="#" 
+                  onClick={(e) => { e.preventDefault(); onNavigate('profile'); }}
+                  className={`flex items-center justify-between px-space-md py-2 transition-colors rounded-xl ${currentView === 'profile' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}`}
+                >
+                  <div className="flex items-center gap-space-md">
+                    <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+                    <span className="font-body-md text-body-md">My Profile</span>
+                  </div>
+                </a>
+              </div>
+            </div>
+
           </nav>
         </div>
         
@@ -138,7 +154,11 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <a href="#" className="flex items-center gap-space-md px-space-md py-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-body-md text-body-md transition-colors w-full">
+            <a 
+              href="#"
+              onClick={(e) => { e.preventDefault(); onNavigate('settings'); }}
+              className={`flex items-center gap-space-md px-space-md py-2 rounded-xl font-body-md text-body-md transition-colors w-full ${currentView === 'settings' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}`}
+            >
               <span className="material-symbols-outlined text-[18px]">settings</span>
               <span>Settings</span>
             </a>
