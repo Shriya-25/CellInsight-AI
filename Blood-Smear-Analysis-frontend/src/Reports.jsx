@@ -104,13 +104,13 @@ const ReportModal = ({ report, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+      className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 print:p-0 print:bg-white print:backdrop-blur-none"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col overflow-hidden border border-slate-300 rounded-lg">
+      <div className="bg-white shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col overflow-hidden border border-slate-300 rounded-lg print:shadow-none print:max-h-none print:border-none print:rounded-none print:w-full print:max-w-full">
 
         {/* ── Modal chrome: Print + Close ────────────────────────────────── */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200 shrink-0">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200 shrink-0 print:hidden">
           <span className="text-xs font-semibold text-slate-600">Report Preview — {reportNum}</span>
           <div className="flex items-center gap-2">
             <button
@@ -131,8 +131,8 @@ const ReportModal = ({ report, onClose }) => {
         </div>
 
         {/* ── Printable clinical document ─────────────────────────────────── */}
-        <div className="overflow-y-auto flex-1 bg-white" style={{ fontFamily: 'Georgia, serif' }}>
-          <div className="px-8 py-6 space-y-0" style={{ fontSize: '12px', color: '#1e293b' }}>
+        <div className="overflow-y-auto flex-1 bg-white print:overflow-visible print:h-full" style={{ fontFamily: "'Calibri', 'Arial', sans-serif" }}>
+          <div className="px-8 py-6 space-y-0 mx-auto print:px-0 print:py-0" style={{ fontSize: '12px', color: '#1e293b', width: '100%', maxWidth: '210mm' }}>
 
             {/* ── LAB LETTERHEAD ─────────────────────────────────────────── */}
             <div className="flex items-start justify-between pb-4 border-b-2 border-slate-800 mb-0">
@@ -331,7 +331,7 @@ const ReportModal = ({ report, onClose }) => {
             </div>
 
             {/* ── DOCUMENT FOOTER ─────────────────────────────────────────── */}
-            <div className="mt-6 pt-3 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-400">
+            <div className="mt-8 pt-3 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-400">
               <span>CellInsight Diagnostic Laboratory</span>
               <span>Page 1 of 1</span>
               <span>Printed on {patientMeta.reportDate}</span>
