@@ -2,6 +2,10 @@ import mongoose from 'mongoose';
 
 const caseSchema = new mongoose.Schema(
   {
+    caseId: {
+      type: String,
+      unique: true,
+    },
     subjectId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'CaseSubject',
@@ -19,6 +23,15 @@ const caseSchema = new mongoose.Schema(
     },
     notes: {
       type: String,
+    },
+    test: {
+      type: String,
+      default: 'Blood Smear',
+    },
+    priority: {
+      type: String,
+      enum: ['Low', 'Medium', 'High'],
+      default: 'Medium',
     },
   },
   {

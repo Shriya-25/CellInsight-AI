@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 const CustomSelect = ({ value, onChange, options }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -92,6 +94,8 @@ const FormSelect = ({ value, onChange, options, name, required }) => {
 const PatientProfile = ({ patient, onBack, onUpdatePatient, onOpenCase }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleEditClick = () => {
     setEditForm({ ...patient });
@@ -150,6 +154,14 @@ const PatientProfile = ({ patient, onBack, onUpdatePatient, onOpenCase }) => {
                   <button onClick={handleEditClick} className="ml-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-semibold transition-colors" type="button">
                     <span className="material-symbols-outlined text-[14px]">edit</span>
                     <span>Edit</span>
+                  </button>
+                  <button 
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 rounded-lg text-[11px] font-semibold transition-colors" 
+                    type="button"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                    <span>Delete</span>
                   </button>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">Registered {patient.date} • {patient.gender} • {patient.age} yrs</p>
@@ -210,93 +222,60 @@ const PatientProfile = ({ patient, onBack, onUpdatePatient, onOpenCase }) => {
           </div>
         </div>
 
-        {/* Right Column: Current Case Spotlight (5 cols) */}
-        <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 flex flex-col gap-5 relative overflow-hidden">
+        {/* Right Column: Case Spotlight (5 cols) */}
+        <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 flex flex-col gap-5 relative overflow-hidden h-fit">
           {/* Top Visual Accent Strip */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#0d9488]"></div>
           {/* Header */}
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between mb-2">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="flex h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse"></span>
-                <span className="text-[10px] font-bold tracking-wider uppercase text-teal-700">Active Diagnostic Workflow</span>
+                <span className="text-[10px] font-bold tracking-wider uppercase text-teal-700">Case History</span>
               </div>
-              <h2 className="text-base font-bold text-slate-900">CURRENT CASE</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Latest laboratory specimen under processing</p>
-            </div>
-            <span className="px-2 py-1 rounded border border-slate-200 bg-slate-50 font-mono text-[10px] font-semibold text-slate-600">
-              06 Sep 2026
-            </span>
-          </div>
-          {/* Case Identity Box */}
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Case Accession ID</span>
-                <span className="font-mono text-sm font-bold text-slate-900">CS-1024</span>
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Sample ID</span>
-                <span className="font-mono text-xs font-semibold text-slate-700">S-1024</span>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-slate-200/60 mt-1">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Test Requested</span>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="material-symbols-outlined text-[16px] text-teal-600">biotech</span>
-                <span className="text-xs font-semibold text-slate-900">Blood Smear (Peripheral Blood Smear)</span>
-              </div>
+              <h2 className="text-base font-bold text-slate-900">ASSOCIATED CASES ({patient.casesCount || 0})</h2>
+              <p className="text-xs text-slate-500 mt-0.5">All laboratory cases registered for this patient</p>
             </div>
           </div>
-          {/* Multi-Stage Status Overview */}
-          <div className="flex flex-col gap-2.5">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Workflow Stage Status</span>
-            <div className="flex flex-col gap-2">
-              {/* Stage 1: AI Analysis */}
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px] text-teal-600">neurology</span>
-                  <span className="text-xs font-semibold text-slate-800">AI Morphology Analysis</span>
+          
+          {/* Cases List */}
+          <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            {patient.rawCases && patient.rawCases.length > 0 ? (
+              patient.rawCases.map((c, index) => (
+                <div key={c._id || index} className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col gap-3 hover:border-teal-200 transition-colors cursor-pointer" onClick={() => onOpenCase && onOpenCase(c)}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Case Accession ID</span>
+                      <span className="font-mono text-sm font-bold text-slate-900">{c.caseId || (c._id && c._id.slice(-6).toUpperCase())}</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Creation Date</span>
+                      <span className="px-2 py-1 rounded border border-slate-200 bg-white font-mono text-[10px] font-semibold text-slate-600">
+                        {new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-200/60">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${
+                        c.status === 'completed' ? 'bg-teal-500' :
+                        c.status === 'processing' ? 'bg-amber-500' :
+                        'bg-slate-400'
+                      }`}></span>
+                      <span className="text-[11px] font-semibold text-slate-600 capitalize">{c.status || 'Pending'}</span>
+                    </div>
+                    <span className="text-xs text-teal-700 font-semibold hover:underline flex items-center gap-1">
+                      View Details <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                    </span>
+                  </div>
                 </div>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-emerald-200/60 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase">
-                  <span className="material-symbols-outlined text-[12px]">check_circle</span>
-                  <span>Completed</span>
-                </span>
+              ))
+            ) : (
+              <div className="p-6 rounded-xl bg-slate-50 border border-slate-100 border-dashed text-center">
+                <span className="material-symbols-outlined text-slate-300 text-3xl mb-2">biotech</span>
+                <p className="text-sm font-medium text-slate-500">No cases found for this patient.</p>
               </div>
-              {/* Stage 2: Expert Review */}
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px] text-slate-400">clinical_notes</span>
-                  <span className="text-xs font-semibold text-slate-800">Expert Pathologist Review</span>
-                </div>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-amber-200/60 bg-amber-50 text-amber-700 text-[10px] font-bold uppercase">
-                  <span className="material-symbols-outlined text-[12px]">schedule</span>
-                  <span>Pending</span>
-                </span>
-              </div>
-              {/* Stage 3: Final Report */}
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px] text-slate-400">description</span>
-                  <span className="text-xs font-semibold text-slate-800">Diagnostic Report</span>
-                </div>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-200 bg-slate-100 text-slate-500 text-[10px] font-bold uppercase">
-                  <span>Not Generated</span>
-                </span>
-              </div>
-            </div>
-          </div>
-          {/* Hint block */}
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-teal-50/50 border border-teal-100/50 text-teal-800 text-[11px] leading-relaxed">
-            <span className="material-symbols-outlined text-[14px] text-teal-600 shrink-0 mt-0.5">lightbulb</span>
-            <p>Full digital smear fields, morphologic tiles, and differential classification are accessible within the Case Workspace.</p>
-          </div>
-          {/* Primary Action Callout */}
-          <div className="pt-2">
-            <button className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#0d9488] hover:bg-teal-700 text-white text-xs font-semibold transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2" type="button">
-              <span>View Case Workspace</span>
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </button>
+            )}
           </div>
         </div>
       </div>
@@ -517,6 +496,70 @@ const PatientProfile = ({ patient, onBack, onUpdatePatient, onOpenCase }) => {
           </form>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              <div className="flex items-center gap-3 text-rose-600 mb-4">
+                <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined">warning</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Delete Patient?</h3>
+              </div>
+              <p className="text-sm text-slate-600">
+                Are you sure you want to permanently delete patient <span className="font-semibold">{patient.name}</span>? 
+                This will also permanently delete all associated cases, images, and AI analysis results. 
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button 
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={async () => {
+                  setIsDeleting(true);
+                  try {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch(`${API_URL}/api/subjects/${patient._id}`, {
+                      method: 'DELETE',
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                      onBack();
+                      window.location.reload();
+                    } else {
+                      alert("Failed to delete patient.");
+                    }
+                  } catch(err) {
+                    alert(err.message);
+                  } finally {
+                    setIsDeleting(false);
+                    setIsDeleteModalOpen(false);
+                  }
+                }}
+                disabled={isDeleting}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-rose-600 border border-transparent rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-70"
+              >
+                {isDeleting ? (
+                  <>
+                    <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Patient'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -536,53 +579,113 @@ export default function Patients() {
   
   const [formGender, setFormGender] = useState('');
   const [formBloodGroup, setFormBloodGroup] = useState('');
+  const [modalPatientId, setModalPatientId] = useState('');
+  const formRef = useRef(null);
 
-  const [patients, setPatients] = useState([
-    {
-      id: 'P-1021', name: 'Rahul Deshmukh', age: '32', gender: 'Male', blood: 'B+',
-      weight: '68 kg', address: 'Pune, MH', contact: '+91 98765 43210',
-      cases: '3 Cases', active: true, date: '06 Jul 2026'
-    },
-    {
-      id: 'P-1022', name: 'Anita Shah', age: '35', gender: 'Female', blood: 'O+',
-      weight: '54 kg', address: 'Mumbai, MH', contact: '+91 97654 32142',
-      cases: '2 Cases', active: true, date: '12 Jul 2026'
-    },
-    {
-      id: 'P-1023', name: 'Rohan Patil', age: '28', gender: 'Male', blood: 'A+',
-      weight: '72 kg', address: 'Thane, MH', contact: '+91 99876 54318',
-      cases: '1 Case', active: true, date: '18 Aug 2026'
-    },
-    {
-      id: 'P-1024', name: 'Sneha Kulkarni', age: '51', gender: 'Female', blood: 'AB+',
-      weight: '61 kg', address: 'Nashik, MH', contact: '+91 96543 21664',
-      cases: '4 Cases', active: true, date: '21 Jun 2026'
-    },
-    {
-      id: 'P-1025', name: 'Arjun Deshmukh', age: '46', gender: 'Male', blood: 'A-',
-      weight: '76 kg', address: 'Nagpur, MH', contact: '+91 98765 43275',
-      cases: '2 Cases', active: true, date: '28 Aug 2026'
-    },
-    {
-      id: 'P-1026', name: 'Priya Nair', age: '29', gender: 'Female', blood: 'O-',
-      weight: '58 kg', address: 'Pune, MH', contact: '+91 98234 56789',
-      cases: '2 Cases', active: true, date: '02 Sep 2026'
-    },
-    {
-      id: 'P-1027', name: 'Vikram Sen', age: '62', gender: 'Male', blood: 'AB-',
-      weight: '81 kg', address: 'Navi Mumbai, MH', contact: '+91 97123 45678',
-      cases: '5 Cases', active: true, date: '14 Sep 2026'
+  const handleOpenModal = () => {
+    const nextIdNum = patients.length > 0 ? Math.max(...patients.map(p => parseInt(p.id.replace(/[^0-9]/g, '')) || 0)) + 1 : 100;
+    setModalPatientId(`P-${nextIdNum}`);
+    if (formRef.current) formRef.current.reset();
+    setFormGender('');
+    setFormBloodGroup('');
+    setIsModalOpen(true);
+  };
+
+  const [patients, setPatients] = useState([]);
+  const [patient, setPatient] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const token = localStorage.getItem('token');
+
+  const fetchPatients = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/subjects`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.status === 401 || response.status === 403) {
+        window.dispatchEvent(new Event('cellinsight_auth_error'));
+        throw new Error('Authentication expired. Please log in again.');
+      }
+      if (!response.ok) throw new Error('Failed to fetch patients');
+      const data = await response.json();
+      const formatted = data.map(d => ({
+        _id: d._id,
+        id: d.patientIdentifier,
+        name: d.name,
+        age: d.demographics?.age?.toString() || '-',
+        gender: d.demographics?.gender || '-',
+        blood: d.demographics?.blood || '-',
+        weight: d.demographics?.weight || '-',
+        address: d.address || '-',
+        contact: d.contact || '-',
+        casesCount: d.cases ? d.cases.length : 0,
+        casesText: d.cases ? `${d.cases.length} Cases` : '0 Cases',
+        rawCases: d.cases || [],
+        active: d.active,
+        date: new Date(d.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      }));
+      setPatients(formatted);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
-  const updatePatient = (updatedPatient) => {
-    setPatients(patients.map(p => p.id === updatedPatient.id ? updatedPatient : p));
-    setSelectedPatient(updatedPatient);
-    
-    // Show toast for feedback
-    setToastMessage({ title: 'Patient Updated', desc: `${updatedPatient.name}'s information has been successfully updated.` });
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
+  const updatePatient = async (updatedPatient) => {
+    try {
+      const response = await fetch(`${API_URL}/api/subjects/${updatedPatient._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: updatedPatient.name,
+          contact: updatedPatient.contact,
+          address: updatedPatient.address,
+          active: updatedPatient.active,
+          demographics: {
+            age: parseInt(updatedPatient.age),
+            gender: updatedPatient.gender,
+            blood: updatedPatient.blood,
+            weight: updatedPatient.weight
+          }
+        })
+      });
+      if (response.status === 401 || response.status === 403) {
+        window.dispatchEvent(new Event('cellinsight_auth_error'));
+        throw new Error('Authentication expired. Please log in again.');
+      }
+      if (!response.ok) throw new Error('Failed to update patient');
+      const data = await response.json();
+      
+      const formatted = {
+        ...updatedPatient,
+        name: data.name,
+        contact: data.contact,
+        address: data.address,
+        age: data.demographics?.age?.toString() || '-',
+        gender: data.demographics?.gender || '-',
+        blood: data.demographics?.blood || '-',
+        weight: data.demographics?.weight || '-'
+      };
+
+      setPatients(patients.map(p => p.id === formatted.id ? formatted : p));
+      setSelectedPatient(formatted);
+      
+      // Show toast for feedback
+      setToastMessage({ title: 'Patient Updated', desc: `${formatted.name}'s information has been successfully updated.` });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const handleRowClick = (patient) => {
@@ -597,7 +700,7 @@ export default function Patients() {
     setDateFilter('ALL');
   };
 
-  const handleNewPatientSubmit = (e) => {
+  const handleNewPatientSubmit = async (e) => {
     e.preventDefault();
     
     const name = e.target.formFullName.value.trim();
@@ -608,30 +711,41 @@ export default function Patients() {
     const weight = e.target.formWeight.value.trim();
     const address = e.target.formAddress.value.trim();
     
-    const newPatient = {
-      id: 'P-1028',
-      name,
-      age,
-      gender,
-      blood,
-      weight: weight ? weight + ' kg' : '-',
-      address: address || '-',
-      contact,
-      cases: '0 Cases',
-      active: false,
-      date: 'Today'
-    };
-
-    setPatients([newPatient, ...patients]);
-    setIsModalOpen(false);
-    
-    // Reset form state
-    setFormGender('');
-    setFormBloodGroup('');
-    
-    setToastMessage({ title: 'Patient Record Created', desc: 'P-1028 (' + name + ') registered successfully.' });
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3800);
+    try {
+      const patientIdentifier = modalPatientId;
+      const response = await fetch(`${API_URL}/api/subjects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          patientIdentifier,
+          name,
+          contact,
+          address,
+          active: false,
+          demographics: { age: parseInt(age), gender, blood, weight }
+        })
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        window.dispatchEvent(new Event('cellinsight_auth_error'));
+        throw new Error('Authentication expired. Please log in again.');
+      }
+      if (!response.ok) throw new Error('Failed to create patient');
+      await fetchPatients();
+      
+      setIsModalOpen(false);
+      setFormGender('');
+      setFormBloodGroup('');
+      
+      setToastMessage({ title: 'Patient Record Created', desc: `${patientIdentifier} (${name}) registered successfully.` });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3800);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const filteredPatients = patients.filter(p => {
@@ -670,7 +784,7 @@ export default function Patients() {
         </div>
         <div>
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenModal}
             className="bg-[#0d9488] hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2" 
             type="button"
           >
@@ -685,7 +799,7 @@ export default function Patients() {
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Patients</div>
-            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">1,248</div>
+            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">{patients.length}</div>
             <div className="text-[11px] text-slate-400 mt-1 font-medium">All registered patients</div>
           </div>
           <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 border border-teal-100 shadow-sm">
@@ -696,7 +810,7 @@ export default function Patients() {
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Active Patients</div>
-            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">86</div>
+            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">{patients.filter(p => p.active).length}</div>
             <div className="text-[11px] text-teal-600 mt-1 font-medium flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
               Patients with active cases
@@ -710,7 +824,7 @@ export default function Patients() {
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Registered Today</div>
-            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">12</div>
+            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">{patients.filter(p => p.date === new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })).length}</div>
             <div className="text-[11px] text-slate-400 mt-1 font-medium">New patient records today</div>
           </div>
           <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 border border-sky-100 shadow-sm">
@@ -721,7 +835,7 @@ export default function Patients() {
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Pending Cases</div>
-            <div className="text-2xl font-bold text-amber-600 mt-1 tracking-tight">18</div>
+            <div className="text-2xl font-bold text-amber-600 mt-1 tracking-tight">{patients.filter(p => p.cases !== '0 Cases').length}</div>
             <div className="text-[11px] text-amber-600/80 mt-1 font-medium">Cases awaiting review</div>
           </div>
           <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100 shadow-sm">
@@ -860,10 +974,24 @@ export default function Patients() {
                   <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap truncate max-w-[140px]">{patient.address}</td>
                   <td className="py-3.5 px-4 font-mono text-slate-600 whitespace-nowrap">{patient.contact}</td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-medium text-slate-800">{patient.cases}</span>
-                      {patient.active && (
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10px] font-semibold px-1.5 py-0.5 rounded">Active</span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-slate-800">{patient.casesText}</span>
+                        {patient.active && (
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10px] font-semibold px-1.5 py-0.5 rounded">Active</span>
+                        )}
+                      </div>
+                      {patient.rawCases && patient.rawCases.length > 0 && (
+                        <div className="flex flex-wrap gap-1 max-w-[120px]">
+                          {patient.rawCases.slice(0, 3).map(c => (
+                            <span key={c._id} className="text-[9px] font-mono bg-slate-100 text-slate-500 px-1 py-0.5 rounded border border-slate-200" title={`Created: ${new Date(c.createdAt).toLocaleDateString()}`}>
+                              {c.caseId || (c._id && c._id.slice(-6).toUpperCase())}
+                            </span>
+                          ))}
+                          {patient.rawCases.length > 3 && (
+                            <span className="text-[9px] text-slate-400 self-center">+{patient.rawCases.length - 3}</span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </td>
@@ -895,7 +1023,7 @@ export default function Patients() {
         {/* Table Footer / Pagination */}
         <div className="bg-slate-50/70 border-t border-slate-100 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <span className="font-mono font-semibold text-slate-800">{filteredPatients.length}</span> of <span className="font-mono font-semibold text-slate-800">1,248</span> registered patients
+            Showing <span className="font-mono font-semibold text-slate-800">{filteredPatients.length}</span> of <span className="font-mono font-semibold text-slate-800">{patients.length}</span> registered patients
           </div>
           <div className="flex items-center gap-2">
             <button className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-400 cursor-not-allowed text-xs font-medium" disabled>Previous</button>
@@ -917,7 +1045,7 @@ export default function Patients() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-slate-900">Register New Patient</h2>
-                <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">Auto ID: P-1028</span>
+                <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">Auto ID: {modalPatientId}</span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">Create clinical laboratory patient record</p>
             </div>
@@ -930,11 +1058,11 @@ export default function Patients() {
             </button>
           </div>
           
-          <form onSubmit={handleNewPatientSubmit} className="px-6 pb-6 pt-4 space-y-3 text-xs">
+          <form ref={formRef} onSubmit={handleNewPatientSubmit} className="px-6 pb-6 pt-4 space-y-3 text-xs">
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Patient ID</label>
-                <input className="w-full h-9 px-3 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 font-mono text-xs cursor-not-allowed" disabled type="text" value="P-1028" />
+                <input className="w-full h-9 px-3 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 font-mono text-xs cursor-not-allowed" disabled type="text" value={modalPatientId} />
               </div>
               <div className="col-span-2">
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Full Name <span className="text-rose-500">*</span></label>

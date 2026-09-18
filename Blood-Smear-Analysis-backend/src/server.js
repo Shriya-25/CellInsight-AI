@@ -13,16 +13,25 @@ connectDB();
 const app = express();
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 },
 });
 const port = process.env.PORT || 3001;
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || "http://localhost:5173" }));
 app.use(express.json());
 
+import cellRoutes from "./routes/cells.js";
+import path from "path";
+
 // Routes
 app.use("/api/auth", authRoutes);
+import subjectRoutes from "./routes/subjects.js";
+app.use("/api/subjects", authenticateToken, subjectRoutes);
 app.use("/api/cases", authenticateToken, caseRoutes);
+app.use("/api/cells", authenticateToken, cellRoutes);
+
+// Serve uploads statically
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.get("/api/health", (_request, response) => {
   response.json({ status: "ok", service: "blood-smear-api" });

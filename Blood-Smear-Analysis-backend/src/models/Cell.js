@@ -20,6 +20,20 @@ const cellSchema = new mongoose.Schema(
       width: Number,
       height: Number,
     },
+    subtype: String,
+    subtypeConfidence: Number,
+    reviewPriority: Number,
+    reviewStatus: {
+      type: String,
+      enum: ['pending', 'accepted', 'reclassified', 'unknown'],
+      default: 'pending'
+    },
+    finalLabel: String,
+    reviewerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    comment: String,
   },
   {
     timestamps: true,

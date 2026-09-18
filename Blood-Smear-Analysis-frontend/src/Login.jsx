@@ -37,10 +37,6 @@ export default function Login({ onLoginSuccess }) {
     }
   };
 
-  const handleDemoLogin = (e) => {
-    e.preventDefault();
-    onLoginSuccess('demo-token-123', { name: 'Demo Pathologist', role: 'doctor/pathologist' });
-  };
 
   return (
     <div className="login-page">
@@ -156,16 +152,6 @@ export default function Login({ onLoginSuccess }) {
                   >
                     <span>{loading ? 'Signing in...' : 'Sign In'}</span>
                     <span aria-hidden="true">→</span>
-                  </button>
-                  
-                  <button
-                    className="btn-submit"
-                    type="button"
-                    onClick={handleDemoLogin}
-                    style={{ flex: 1, backgroundColor: '#565e74' }}
-                    title="Bypass login for UI testing"
-                  >
-                    <span>Demo Mode</span>
                   </button>
                 </div>
               </form>

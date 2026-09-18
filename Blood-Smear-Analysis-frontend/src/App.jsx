@@ -11,10 +11,17 @@ import Reports from "./Reports.jsx";
 import Settings from "./Settings.jsx";
 import Profile from "./Profile.jsx";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 function App() {
+  const getInitialView = () => {
+    const hash = window.location.hash.replace('#', '');
+    return hash || 'dashboard';
+  };
+
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [user, setUser] = useState(JSON.parse(localStorage.getItem("user") || "null"));
-  const [currentView, setCurrentView] = useState("dashboard");
+  const [currentView, setCurrentView] = useState(getInitialView());
   const [initialCase, setInitialCase] = useState(null);
 
   const handleLoginSuccess = (newToken, newUser) => {
@@ -22,6 +29,7 @@ function App() {
     localStorage.setItem("user", JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
+    window.location.hash = 'dashboard';
   };
 
   const handleLogout = () => {
@@ -41,9 +49,45 @@ function App() {
         setCurrentView(view);
       }
     };
+    
+    const handleAuthError = () => {
+      handleLogout();
+    };
+    
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && hash !== currentView) {
+        setCurrentView(hash);
+      }
+    };
+
     window.addEventListener('cellinsight_navigate', handleCrossNav);
-    return () => window.removeEventListener('cellinsight_navigate', handleCrossNav);
-  }, []);
+    window.addEventListener('cellinsight_auth_error', handleAuthError);
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+      window.removeEventListener('cellinsight_navigate', handleCrossNav);
+      window.removeEventListener('cellinsight_auth_error', handleAuthError);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [currentView]);
+
+  useEffect(() => {
+    if (token) {
+      window.location.hash = currentView;
+      
+      // Proactively verify token on load since some views (like Dashboard) don't fetch data yet
+      fetch(`${API_URL}/api/cases`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => {
+        if (res.status === 401 || res.status === 403) {
+          window.dispatchEvent(new Event('cellinsight_auth_error'));
+        }
+      })
+      .catch(err => console.error("Error verifying token on load:", err));
+    }
+  }, [currentView, token]);
 
   if (!token) {
     return <Login onLoginSuccess={handleLoginSuccess} />;

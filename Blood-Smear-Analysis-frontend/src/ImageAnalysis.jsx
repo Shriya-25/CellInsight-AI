@@ -49,6 +49,12 @@ export default function ImageAnalysis({ token }) {
         },
         body: formData,
       });
+      
+      if (response.status === 401 || response.status === 403) {
+        window.dispatchEvent(new Event('cellinsight_auth_error'));
+        throw new Error('Authentication expired. Please log in again.');
+      }
+      
       if (!response.ok) throw new Error("Analysis request failed");
       const result = await response.json();
       setAnalysis(result);

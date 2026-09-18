@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 const CustomSelect = ({ value, onChange, options }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -87,6 +89,72 @@ const FormSelect = ({ value, onChange, options }) => {
 };
 
 const CaseDetails = ({ caseData, onBack }) => {
+  const token = localStorage.getItem('token');
+  const fileInputRef = useRef(null);
+  const [analyses, setAnalyses] = useState([]);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (caseData._id) {
+      fetch(`${API_URL}/api/cases/${caseData._id}/analyses`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => setAnalyses(data))
+      .catch(err => console.error(err));
+    }
+  }, [caseData._id, token]);
+
+  const handleUploadImage = async (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+    
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+    
+    try {
+      const res = await fetch(`${API_URL}/api/cases/${caseData._id}/images`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      if (res.status === 401 || res.status === 403) {
+        window.dispatchEvent(new Event('cellinsight_auth_error'));
+        throw new Error('Authentication expired. Please log in again.');
+      }
+      if(res.ok) {
+        alert("Image uploaded successfully");
+      } else {
+        const errText = await res.text();
+        alert(`Upload failed: ${errText}`);
+      }
+    } catch(err) {
+      alert(`Upload exception: ${err.message}`);
+    }
+  };
+
+  const handleRunAnalysis = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/cases/${caseData._id}/analyze`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.status === 401 || res.status === 403) {
+        window.dispatchEvent(new Event('cellinsight_auth_error'));
+        throw new Error('Authentication expired. Please log in again.');
+      }
+      if(res.ok) {
+        alert("Analysis triggered successfully. Cases will update.");
+      } else {
+        const errText = await res.text();
+        alert(`Analysis failed: ${errText}`);
+      }
+    } catch(err) {
+      alert(`Analysis exception: ${err.message}`);
+    }
+  };
+
   return (
     <div className="flex-1 max-w-[1536px] w-full mx-auto space-y-5 pb-10">
       {/* Breadcrumbs & Header Actions Row */}
@@ -108,6 +176,13 @@ const CaseDetails = ({ caseData, onBack }) => {
               <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
             </svg>
             Edit Case
+          </button>
+          <button 
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-700 bg-white border border-rose-200 rounded-lg hover:bg-rose-50 transition shadow-sm"
+            onClick={() => setIsDeleteModalOpen(true)}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Delete
           </button>
           <button className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition shadow-sm">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -258,9 +333,14 @@ const CaseDetails = ({ caseData, onBack }) => {
               <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">✓</span>
               <span className="text-slate-600 font-medium">4 fields accepted <span className="text-slate-300 mx-1.5">|</span> 1 field needs review</span>
             </div>
-            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 bg-white border border-teal-600 rounded-lg hover:bg-teal-50 transition">
+            <input type="file" ref={fileInputRef} className="hidden" onChange={handleUploadImage} />
+            <button onClick={() => fileInputRef.current.click()} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 bg-white border border-teal-600 rounded-lg hover:bg-teal-50 transition">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
               Add Image
+            </button>
+            <button onClick={handleRunAnalysis} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-teal-600 border border-teal-600 rounded-lg hover:bg-teal-700 transition">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+              Run Analysis
             </button>
           </div>
         </article>
@@ -394,6 +474,69 @@ const CaseDetails = ({ caseData, onBack }) => {
           </div>
         </article>
       </section>
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              <div className="flex items-center gap-3 text-rose-600 mb-4">
+                <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined">warning</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Delete Case?</h3>
+              </div>
+              <p className="text-sm text-slate-600">
+                Are you sure you want to permanently delete case <span className="font-semibold">{caseData.id}</span>? 
+                This will also permanently delete all associated images, slide data, and AI analysis results. 
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button 
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={async () => {
+                  setIsDeleting(true);
+                  try {
+                    const res = await fetch(`${API_URL}/api/cases/${caseData._id}`, {
+                      method: 'DELETE',
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                      onBack();
+                      window.location.reload();
+                    } else {
+                      alert("Failed to delete case.");
+                    }
+                  } catch(err) {
+                    alert(err.message);
+                  } finally {
+                    setIsDeleting(false);
+                    setIsDeleteModalOpen(false);
+                  }
+                }}
+                disabled={isDeleting}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-rose-600 border border-transparent rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-70"
+              >
+                {isDeleting ? (
+                  <>
+                    <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Case'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -404,40 +547,143 @@ export default function Cases({ initialCase }) {
   const [testFilter, setTestFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalPatient, setModalPatient] = useState('Rahul Deshmukh (P-1021)');
+  const [modalPatient, setModalPatient] = useState('');
   const [modalTestType, setModalTestType] = useState('Blood Smear (Peripheral)');
   const [modalPriority, setModalPriority] = useState('Medium');
   const [modalSampleId, setModalSampleId] = useState('');
+  const [modalImageFile, setModalImageFile] = useState(null);
   const [selectedCase, setSelectedCase] = useState(initialCase || null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const formRef = useRef(null);
+  const modalFileInputRef = useRef(null);
+
+  const handleOpenModal = () => {
+    const nextIdNum = cases.length > 0 ? Math.max(...cases.map(c => parseInt(c.id.replace(/[^0-9]/g, '')) || 0)) + 1 : 100;
+    setModalSampleId(`S-${nextIdNum}`);
+    if (patients.length > 0) setModalPatient(patients[0].value);
+    setModalTestType('Blood Smear (Peripheral)');
+    setModalPriority('Medium');
+    setModalImageFile(null);
+    if (formRef.current) formRef.current.reset();
+    setIsModalOpen(true);
+  };
+  
+  const [cases, setCases] = useState([]);
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem('token');
+
+  const fetchCasesAndPatients = async () => {
+    try {
+      setLoading(true);
+      const [casesRes, patientsRes] = await Promise.all([
+        fetch(`${API_URL}/api/cases`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_URL}/api/subjects`, { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      
+      if (casesRes.status === 401 || casesRes.status === 403 || patientsRes.status === 401 || patientsRes.status === 403) {
+        window.dispatchEvent(new Event('cellinsight_auth_error'));
+        throw new Error('Authentication expired. Please log in again.');
+      }
+      
+      if (casesRes.ok && patientsRes.ok) {
+        const casesData = await casesRes.json();
+        const patientsData = await patientsRes.json();
+        
+        const formattedCases = casesData.map(c => ({
+          _id: c._id,
+          id: c.caseId || c._id.slice(-6).toUpperCase(),
+          patient: c.subjectId?.name || 'Unknown',
+          patientId: c.subjectId?.patientIdentifier || '-',
+          test: c.test || 'Blood Smear',
+          date: new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          finding: c.finding || '-',
+          confidence: c.confidence,
+          status: c.status === 'draft' ? 'Draft' : c.status === 'review_pending' ? 'Review Required' : c.status === 'verified' ? 'Verified' : 'AI Processing',
+          priority: c.priority || 'Medium',
+          colorType: c.colorType || 'neutral'
+        }));
+        setCases(formattedCases);
+        
+        const formattedPatients = patientsData.map(p => ({
+          value: p._id,
+          label: `${p.name} (${p.patientIdentifier})`
+        }));
+        setPatients(formattedPatients);
+        if (formattedPatients.length > 0 && !modalPatient) {
+          setModalPatient(formattedPatients[0].value);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (initialCase) setSelectedCase(initialCase);
   }, [initialCase]);
 
-  const [cases, setCases] = useState([
-    { id: 'CS-1024', patient: 'Rahul Deshmukh', patientId: 'P-1021', test: 'CBC + Blood Smear', date: '06 Sep 2026', finding: 'Abnormal cell pattern', confidence: 94.6, status: 'Review Required', priority: 'High', colorType: 'error' },
-    { id: 'CS-1023', patient: 'Anita Shah', patientId: 'P-1022', test: 'Blood Smear', date: '06 Sep 2026', finding: 'No significant abnormality', confidence: 96.2, status: 'Verified', priority: 'Low', colorType: 'success' },
-    { id: 'CS-1022', patient: 'Rohan Patil', patientId: 'P-1023', test: 'Blood Smear', date: '06 Sep 2026', finding: 'Cell classification in progress', confidence: null, status: 'AI Processing', priority: 'Medium', colorType: 'processing' },
-    { id: 'CS-1021', patient: 'Sneha Kulkarni', patientId: 'P-1024', test: 'CBC + Blood Smear', date: '05 Sep 2026', finding: 'Possible cell anomaly', confidence: 88.1, status: 'Review Required', priority: 'High', colorType: 'warning' },
-    { id: 'CS-1020', patient: 'Vikram Sen', patientId: 'P-1025', test: 'Blood Smear', date: '05 Sep 2026', finding: 'Mild anisocytosis', confidence: 92.4, status: 'Verified', priority: 'Low', colorType: 'neutral' }
-  ]);
+  useEffect(() => {
+    fetchCasesAndPatients();
+  }, []);
 
-  const handleCreateCase = (e) => {
+  const handleCreateCase = async (e) => {
     e.preventDefault();
-    const newCase = {
-      id: `CS-${1025 + cases.length}`,
-      patient: modalPatient.split(' (')[0] || 'Unknown Patient',
-      patientId: modalPatient.split('(')[1]?.replace(')', '') || 'P-0000',
-      test: modalTestType,
-      date: '17 Sep 2026',
-      finding: 'Processing pending...',
-      confidence: null,
-      status: 'AI Processing',
-      priority: modalPriority,
-      colorType: 'processing'
-    };
-    setCases([newCase, ...cases]);
-    setIsModalOpen(false);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_URL}/api/cases`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          subjectId: modalPatient,
+          caseId: modalSampleId,
+          test: modalTestType,
+          priority: modalPriority,
+          status: 'draft'
+        })
+      });
+      if (response.status === 401 || response.status === 403) {
+        window.dispatchEvent(new Event('cellinsight_auth_error'));
+        throw new Error('Authentication expired. Please log in again.');
+      }
+      if (!response.ok) throw new Error('Failed to create case');
+      
+      const newCase = await response.json();
+      
+      if (modalImageFile) {
+        const formData = new FormData();
+        formData.append('image', modalImageFile);
+        
+        const uploadRes = await fetch(`${API_URL}/api/cases/${newCase._id}/images`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        
+        if (uploadRes.ok) {
+          // Trigger analysis
+          await fetch(`${API_URL}/api/cases/${newCase._id}/analyze`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+        } else {
+          alert('Case created but image upload failed.');
+        }
+      }
+
+      await fetchCasesAndPatients();
+      setIsModalOpen(false);
+    } catch(err) {
+      alert(`Case creation error: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetFilters = () => {
@@ -471,7 +717,7 @@ export default function Cases({ initialCase }) {
         <div>
           <button 
             className="bg-[#0d9488] hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2" 
-            onClick={() => setIsModalOpen(true)} 
+            onClick={handleOpenModal} 
             type="button"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><line x1="12" y1="10" x2="12" y2="16"></line><line x1="9" y1="13" x2="15" y2="13"></line></svg>
@@ -485,7 +731,7 @@ export default function Cases({ initialCase }) {
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Cases</div>
-            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">148</div>
+            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">{cases.length}</div>
             <div className="text-[11px] text-slate-400 mt-1 font-medium">All registered cases</div>
           </div>
           <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 shadow-sm border border-teal-100">
@@ -496,7 +742,7 @@ export default function Cases({ initialCase }) {
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Review Required</div>
-            <div className="text-2xl font-bold text-amber-600 mt-1 tracking-tight">12</div>
+            <div className="text-2xl font-bold text-amber-600 mt-1 tracking-tight">{cases.filter(c => c.status === 'Review Required').length}</div>
             <div className="text-[11px] text-amber-600/80 mt-1 font-medium flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Cases awaiting expert review
             </div>
@@ -509,7 +755,7 @@ export default function Cases({ initialCase }) {
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">AI Processing</div>
-            <div className="text-2xl font-bold text-sky-600 mt-1 tracking-tight">4</div>
+            <div className="text-2xl font-bold text-sky-600 mt-1 tracking-tight">{cases.filter(c => c.status === 'AI Processing').length}</div>
             <div className="text-[11px] text-sky-600/80 mt-1 font-medium">Cases currently being analyzed</div>
           </div>
           <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 shadow-sm border border-sky-100">
@@ -683,7 +929,7 @@ export default function Cases({ initialCase }) {
         {/* Table Pagination & Counter */}
         <div className="bg-slate-50/70 border-t border-slate-100 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <span className="font-mono font-semibold text-slate-800">{filteredCases.length}</span> of <span className="font-mono font-semibold text-slate-800">148</span> cases
+            Showing <span className="font-mono font-semibold text-slate-800">{filteredCases.length}</span> of <span className="font-mono font-semibold text-slate-800">{cases.length}</span> cases
           </div>
           <div className="flex items-center gap-2">
             <button className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-400 cursor-not-allowed text-xs font-medium" disabled>Previous</button>
@@ -719,7 +965,7 @@ export default function Cases({ initialCase }) {
           </div>
           
           {/* Modal Body Form */}
-          <form className="px-6 pb-6 pt-4 space-y-4 text-xs" onSubmit={handleCreateCase}>
+          <form ref={formRef} className="px-6 pb-6 pt-4 space-y-4 text-xs" onSubmit={handleCreateCase}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Patient Selector */}
               <div>
@@ -727,20 +973,13 @@ export default function Cases({ initialCase }) {
                 <FormSelect 
                   value={modalPatient} 
                   onChange={setModalPatient} 
-                  options={[
-                    { value: 'Rahul Deshmukh (P-1021)', label: 'Rahul Deshmukh (P-1021)' },
-                    { value: 'Anita Shah (P-1022)', label: 'Anita Shah (P-1022)' },
-                    { value: 'Rohan Patil (P-1023)', label: 'Rohan Patil (P-1023)' },
-                    { value: 'Sneha Kulkarni (P-1024)', label: 'Sneha Kulkarni (P-1024)' },
-                    { value: 'Vikram Sen (P-1025)', label: 'Vikram Sen (P-1025)' },
-                    { value: 'new', label: '+ Add New Patient...' }
-                  ]} 
+                  options={patients.length > 0 ? patients : [{ value: '', label: 'Loading patients...' }]} 
                 />
               </div>
               {/* Sample ID */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Sample ID (Barcode / Accession) <span className="text-rose-500">*</span></label>
-                <input required className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600" type="text" defaultValue="S-1025" />
+                <input required readOnly className="w-full h-9 px-3 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 font-mono text-xs cursor-not-allowed focus:outline-none" type="text" value={modalSampleId} />
               </div>
             </div>
             
@@ -808,16 +1047,37 @@ export default function Cases({ initialCase }) {
             {/* Blood Smear Image Upload Area */}
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Blood Smear Slide Images (Whole-Slide Scan or FOVs)</label>
-              <div className="p-6 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-100 transition-colors">
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-teal-600 mb-3 shadow-sm border border-slate-200">
-                  <span className="material-symbols-outlined text-[20px]">cloud_upload</span>
-                </div>
-                <p className="font-semibold text-slate-800">
-                  Drag &amp; drop specimen slide images or <span className="text-teal-600 hover:underline">browse</span>
-                </p>
-                <p className="text-slate-500 mt-1">
-                  Supports TIFF, SVS, NDPI, PNG, DICOM · Minimum 100x oil immersion fields recommended
-                </p>
+              <input 
+                type="file" 
+                ref={modalFileInputRef} 
+                className="hidden" 
+                onChange={(e) => setModalImageFile(e.target.files[0])} 
+              />
+              <div 
+                className="p-6 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-100 transition-colors"
+                onClick={() => modalFileInputRef.current.click()}
+              >
+                {modalImageFile ? (
+                  <>
+                    <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 mb-3 shadow-sm border border-teal-200">
+                      <span className="material-symbols-outlined text-[20px]">check_circle</span>
+                    </div>
+                    <p className="font-semibold text-teal-700">{modalImageFile.name}</p>
+                    <p className="text-slate-500 mt-1">{(modalImageFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-teal-600 mb-3 shadow-sm border border-slate-200">
+                      <span className="material-symbols-outlined text-[20px]">cloud_upload</span>
+                    </div>
+                    <p className="font-semibold text-slate-800">
+                      Drag &amp; drop specimen slide images or <span className="text-teal-600 hover:underline">browse</span>
+                    </p>
+                    <p className="text-slate-500 mt-1">
+                      Supports TIFF, SVS, NDPI, PNG, DICOM · Minimum 100x oil immersion fields recommended
+                    </p>
+                  </>
+                )}
               </div>
             </div>
             
@@ -827,15 +1087,26 @@ export default function Cases({ initialCase }) {
                 className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors" 
                 onClick={() => setIsModalOpen(false)} 
                 type="button"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button 
-                className="px-4 py-2 rounded-lg bg-[#0d9488] hover:bg-teal-700 text-white text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5" 
+                className={`px-4 py-2 rounded-lg bg-[#0d9488] hover:bg-teal-700 text-white text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`} 
                 type="submit"
+                disabled={isSubmitting}
               >
-                <span className="material-symbols-outlined text-[16px]">biotech</span>
-                <span>Submit &amp; Initiate AI Analysis</span>
+                {isSubmitting ? (
+                  <>
+                    <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[16px]">biotech</span>
+                    <span>Submit &amp; Initiate AI Analysis</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

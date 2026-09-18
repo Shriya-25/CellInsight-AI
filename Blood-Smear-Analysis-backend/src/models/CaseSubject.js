@@ -8,10 +8,15 @@ const caseSubjectSchema = new mongoose.Schema(
       unique: true,
       comment: 'Anonymized or hashed identifier for the patient',
     },
+    name: { type: String, required: true },
+    contact: { type: String, required: true },
+    address: { type: String },
+    active: { type: Boolean, default: false },
     demographics: {
       age: Number,
       gender: String,
-      // Add more demographic fields as needed safely
+      blood: String,
+      weight: String,
     },
   },
   {

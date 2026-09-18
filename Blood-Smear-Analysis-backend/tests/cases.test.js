@@ -31,15 +31,36 @@ afterAll(async () => {
   }
 });
 
+import bcrypt from 'bcryptjs';
+import User from '../src/models/User.js';
+
 describe('Phase 1 Backend API Tests', () => {
   let testSubjectId;
+  let token;
 
   beforeAll(async () => {
     // Create a mock subject to use in case tests
     const subject = await CaseSubject.create({
       patientIdentifier: 'TEST-PATIENT-001',
+      name: 'Test Patient',
+      contact: '1234567890'
     });
     testSubjectId = subject._id.toString();
+
+    // Create a test user and obtain a token
+    const passwordHash = await bcrypt.hash('testpass', 10);
+    await User.create({
+      name: 'Test User',
+      email: 'test@test.com',
+      password: passwordHash,
+      role: 'technician',
+    });
+
+    const authRes = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'test@test.com', password: 'testpass' });
+    
+    token = authRes.body.token;
   });
 
   it('GET /api/health should return ok', async () => {
@@ -53,6 +74,7 @@ describe('Phase 1 Backend API Tests', () => {
   it('POST /api/cases should create a new case with valid payload', async () => {
     const res = await request(app)
       .post('/api/cases')
+      .set('Authorization', `Bearer ${token}`)
       .send({
         subjectId: testSubjectId,
         notes: 'Test case note',
@@ -69,6 +91,7 @@ describe('Phase 1 Backend API Tests', () => {
   it('POST /api/cases should return 400 for invalid payload (missing subjectId)', async () => {
     const res = await request(app)
       .post('/api/cases')
+      .set('Authorization', `Bearer ${token}`)
       .send({
         notes: 'Invalid case missing subject',
       });
@@ -78,14 +101,14 @@ describe('Phase 1 Backend API Tests', () => {
   });
 
   it('GET /api/cases should return list of cases', async () => {
-    const res = await request(app).get('/api/cases');
+    const res = await request(app).get('/api/cases').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThan(0);
   });
 
   it('GET /api/cases/:id should return a specific case', async () => {
-    const res = await request(app).get(`/api/cases/${createdCaseId}`);
+    const res = await request(app).get(`/api/cases/${createdCaseId}`).set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body._id).toBe(createdCaseId);
     expect(res.body.subjectId._id).toBe(testSubjectId); // populated
@@ -102,6 +125,7 @@ describe('Phase 1 Backend API Tests', () => {
 
     const res = await request(app)
       .post('/api/analysis')
+      .set('Authorization', `Bearer ${token}`)
       .attach('image', Buffer.from('mock image data'), 'test.jpg');
 
     expect(res.status).toBe(200);
