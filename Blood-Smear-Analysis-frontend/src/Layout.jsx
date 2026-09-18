@@ -93,11 +93,16 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
                     <span className="font-body-md text-body-md">Image Analysis</span>
                   </div>
                 </a>
-                <a href="#" className="flex items-center justify-between px-space-md py-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
+                <a 
+                  href="#" 
+                  onClick={(e) => { e.preventDefault(); onNavigate('review-queue'); }}
+                  className={`flex items-center justify-between px-space-md py-2 transition-colors rounded-xl ${currentView === 'review-queue' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}`}
+                >
                   <div className="flex items-center gap-space-md">
                     <span className="material-symbols-outlined text-[18px]">fact_check</span>
                     <span className="font-body-md text-body-md">Review Queue</span>
                   </div>
+                  <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200/60 rounded">12</span>
                 </a>
               </div>
             </div>

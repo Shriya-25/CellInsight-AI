@@ -89,7 +89,7 @@ const FormSelect = ({ value, onChange, options, name, required }) => {
   );
 };
 
-const PatientProfile = ({ patient, onBack, onUpdatePatient }) => {
+const PatientProfile = ({ patient, onBack, onUpdatePatient, onOpenCase }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({});
 
@@ -326,63 +326,48 @@ const PatientProfile = ({ patient, onBack, onUpdatePatient }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-              {/* Row 1 */}
-              <tr className="hover:bg-slate-50 transition-colors">
-                <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">06 Sep 2026</td>
-                <td className="py-3.5 px-4 font-mono font-semibold text-teal-700 whitespace-nowrap">CS-1024</td>
-                <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-900">Blood Smear</td>
-                <td className="py-3.5 px-4 text-slate-700">Abnormal cell pattern</td>
-                <td className="py-3.5 px-4 whitespace-nowrap">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200/60">
-                    <span className="material-symbols-outlined text-[12px]">schedule</span>
-                    <span>Review Required</span>
-                  </span>
-                </td>
-                <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                  <button className="inline-flex items-center gap-1 text-teal-600 font-semibold hover:underline text-xs" type="button">
-                    <span>View Case</span>
-                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                  </button>
-                </td>
-              </tr>
-              {/* Row 2 */}
-              <tr className="hover:bg-slate-50 transition-colors">
-                <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">02 Aug 2026</td>
-                <td className="py-3.5 px-4 font-mono font-semibold text-slate-900 whitespace-nowrap">CS-0945</td>
-                <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">Blood Smear</td>
-                <td className="py-3.5 px-4 text-slate-600">Mild anisocytosis</td>
-                <td className="py-3.5 px-4 whitespace-nowrap">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                    <span className="material-symbols-outlined text-[12px]">done_all</span>
-                    <span>Reviewed</span>
-                  </span>
-                </td>
-                <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                  <button className="inline-flex items-center gap-1 text-slate-500 hover:text-teal-600 font-semibold transition-colors text-xs" type="button">
-                    <span>View Report</span>
-                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                  </button>
-                </td>
-              </tr>
-              {/* Row 3 */}
-              <tr className="hover:bg-slate-50 transition-colors">
-                <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">10 Jul 2026</td>
-                <td className="py-3.5 px-4 font-mono font-semibold text-slate-900 whitespace-nowrap">CS-0891</td>
-                <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">CBC</td>
-                <td className="py-3.5 px-4 text-slate-600">No significant abnormality</td>
-                <td className="py-3.5 px-4 whitespace-nowrap">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                    <span className="material-symbols-outlined text-[12px]">verified</span>
-                    <span>Verified</span>
-                  </span>
-                </td>
-                <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                  <button className="inline-flex items-center gap-1 text-slate-500 hover:text-teal-600 font-semibold transition-colors text-xs" type="button">
-                    <span>View Report</span>
-                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                  </button>
-                </td>
-              </tr>
+              {[
+                { date: '06 Sep 2026', id: 'CS-1024', test: 'Blood Smear', finding: 'Abnormal cell pattern', status: 'Review Required', active: true, caseObj: { id: 'CS-1024', patient: patient.name, patientId: patient.id, test: 'CBC + Blood Smear', date: '06 Sep 2026', finding: 'Abnormal cell pattern', confidence: 94.6, status: 'Review Required', priority: 'High', colorType: 'error' } },
+                { date: '02 Aug 2026', id: 'CS-0945', test: 'Blood Smear', finding: 'Mild anisocytosis', status: 'Reviewed', active: false },
+                { date: '10 Jul 2026', id: 'CS-0891', test: 'CBC', finding: 'No significant abnormality', status: 'Verified', active: false },
+              ].map((row) => (
+                <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">{row.date}</td>
+                  <td className={`py-3.5 px-4 font-mono font-semibold whitespace-nowrap ${row.active ? 'text-teal-700' : 'text-slate-900'}`}>{row.id}</td>
+                  <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700">{row.test}</td>
+                  <td className="py-3.5 px-4 text-slate-600">{row.finding}</td>
+                  <td className="py-3.5 px-4 whitespace-nowrap">
+                    {row.active ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200/60">
+                        <span className="material-symbols-outlined text-[12px]">schedule</span>
+                        <span>{row.status}</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                        <span className="material-symbols-outlined text-[12px]">{row.status === 'Verified' ? 'verified' : 'done_all'}</span>
+                        <span>{row.status}</span>
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                    {row.active ? (
+                      <button
+                        onClick={() => onOpenCase && onOpenCase(row.caseObj)}
+                        className="inline-flex items-center gap-1 text-teal-600 font-semibold hover:underline text-xs"
+                        type="button"
+                      >
+                        <span>View Case</span>
+                        <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                      </button>
+                    ) : (
+                      <button className="inline-flex items-center gap-1 text-slate-500 hover:text-teal-600 font-semibold transition-colors text-xs" type="button">
+                        <span>View Report</span>
+                        <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -663,8 +648,17 @@ export default function Patients() {
   });
 
   if (selectedPatient) {
-    return <PatientProfile patient={selectedPatient} onBack={() => setSelectedPatient(null)} onUpdatePatient={updatePatient} />;
+    return <PatientProfile 
+      patient={selectedPatient} 
+      onBack={() => setSelectedPatient(null)} 
+      onUpdatePatient={updatePatient}
+      onOpenCase={(caseObj) => {
+        sessionStorage.setItem('cellinsight_open_case', JSON.stringify(caseObj));
+        window.dispatchEvent(new CustomEvent('cellinsight_navigate', { detail: { view: 'cases', openCase: caseObj } }));
+      }}
+    />;
   }
+
 
   return (
     <div className="space-y-6 flex-1 max-w-7xl w-full mx-auto pb-10">
