@@ -130,7 +130,15 @@ const PatientProfile = ({ patient, onBack, onUpdatePatient, onOpenCase }) => {
         </div>
         {/* Action Button */}
         <div className="flex items-center gap-3">
-          <button className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0d9488] hover:bg-teal-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2" type="button">
+          <button 
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0d9488] hover:bg-teal-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2" 
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('cellinsight_navigate', {
+                detail: { view: 'cases', newCasePatientId: patient._id || patient.id } // Use _id if available, fallback to id
+              }));
+            }}
+          >
             <span className="material-symbols-outlined text-[18px]">add</span>
             <span>New Case</span>
           </button>

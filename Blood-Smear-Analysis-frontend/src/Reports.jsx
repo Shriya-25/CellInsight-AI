@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 // ─── Custom themed select (matching Patients/Cases style) ──────────────────────
 const CustomSelect = ({ value, onChange, options }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -52,51 +54,66 @@ const ReportModal = ({ report, onClose }) => {
   const reportNum = report.id;
   const caseId    = report.caseId;
 
-  // Static clinical data (in a real system this would come from an API)
+  // Real data mapped from the API response
   const patientMeta = {
-    age: '32 Years / Male',
+    age: (report.patientAge && report.patientGender) ? `${report.patientAge} Years / ${report.patientGender}` : 'Unknown / Unknown',
     referredBy: 'Dr. S. Kulkarni',
-    sampleType: 'Peripheral Blood Smear',
-    collectionDate: `${report.date}, 10:22 AM`,
-    reportDate: `${report.date}, 04:55 PM`,
+    sampleType: report.test || 'Peripheral Blood Smear',
+    collectionDate: report.collectionDate || `${report.date}`,
+    reportDate: `${report.date}`,
   };
 
   const analysisSummary = [
-    { label: 'No. of Images Analysed', value: '3' },
-    { label: 'Image Quality',           value: 'Good' },
+    { label: 'No. of Images Analysed', value: report.imageCount !== undefined ? report.imageCount : 0 },
+    { label: 'Image Quality',           value: report.qualityStatus || 'Unknown' },
     { label: 'AI Model Version',        value: 'YOLOv8 + EfficientNet v1.2' },
-    { label: 'Analysis Time',           value: '2.8 seconds' },
+    { label: 'AI Confidence',           value: report.aiConfidence ? `${(report.aiConfidence * 100).toFixed(1)}%` : 'N/A' },
   ];
+
+  const total = report.totalCells || 0;
+  const rbc = report.rbcCount || 0;
+  const wbc = report.wbcCount || 0;
+  const plt = report.plateletCount || 0;
 
   const cellCounts = [
-    { param: 'Red Blood Cells (RBC)',   count: 148, pct: '78.7', ref: '—' },
-    { param: 'White Blood Cells (WBC)', count: 12,  pct: '6.4',  ref: '—' },
-    { param: 'Platelets',               count: 28,  pct: '14.9', ref: '—' },
+    { param: 'Red Blood Cells (RBC)',   count: rbc, pct: total ? ((rbc / total) * 100).toFixed(1) : '0', ref: '—' },
+    { param: 'White Blood Cells (WBC)', count: wbc, pct: total ? ((wbc / total) * 100).toFixed(1) : '0', ref: '—' },
+    { param: 'Platelets',               count: plt, pct: total ? ((plt / total) * 100).toFixed(1) : '0', ref: '—' },
   ];
 
-  const wbcDiff = [
-    { type: 'Neutrophils',  count: 5, pct: '41.7' },
-    { type: 'Lymphocytes',  count: 3, pct: '25.0' },
-    { type: 'Monocytes',    count: 2, pct: '16.7' },
-    { type: 'Eosinophils',  count: 1, pct: '8.3'  },
-    { type: 'Basophils',    count: 1, pct: '8.3'  },
-  ];
+  const wbcDiff = [];
+  if (report.wbcSubtypes) {
+    for (const [subtype, count] of Object.entries(report.wbcSubtypes)) {
+      if (count > 0) {
+        wbcDiff.push({
+          type: subtype.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          count,
+          pct: wbc ? ((count / wbc) * 100).toFixed(1) : '0'
+        });
+      }
+    }
+  }
+  if (wbcDiff.length === 0) {
+    wbcDiff.push({ type: 'No WBCs detected', count: 0, pct: '0' });
+  }
 
   const reviewSummary = [
-    { label: 'Cells Accepted',          value: 174 },
-    { label: 'Cells Modified',          value: 10  },
-    { label: 'Cells Marked Unknown',    value: 4   },
-    { label: 'Cells Flagged for Review',value: 2   },
+    { label: 'Cells Accepted',          value: report.reviewSummary?.accepted || 0 },
+    { label: 'Cells Reclassified',      value: report.reviewSummary?.reclassified || 0 },
+    { label: 'Cells Marked Unknown',    value: report.reviewSummary?.unknown || 0 },
+    { label: 'Cells Pending Review',    value: report.reviewSummary?.pending || 0 },
   ];
 
-  const remarks = [
-    'Overall smear quality is good.',
-    'Normal RBC morphology observed.',
-    'WBC count appears within expected range.',
-    'Platelet count is adequate.',
-    'No significant abnormal morphology detected.',
-    'Please correlate with clinical findings and other laboratory parameters.',
-  ];
+  let remarks = [];
+  if (report.qualityReasons && report.qualityReasons.length > 0) {
+    remarks.push(...report.qualityReasons);
+  }
+  if (report.remarks && report.remarks.length > 0) {
+    remarks.push(...report.remarks);
+  }
+  if (remarks.length === 0) {
+    remarks = ['Please correlate with clinical findings and other laboratory parameters.'];
+  }
 
   const thCls  = 'border border-slate-300 px-3 py-2 text-left text-[11px] font-bold text-slate-700 bg-slate-100 uppercase tracking-wide';
   const tdCls  = 'border border-slate-300 px-3 py-2 text-xs text-slate-700';
@@ -345,15 +362,7 @@ const ReportModal = ({ report, onClose }) => {
   );
 };
 
-// ─── Reports data ──────────────────────────────────────────────────────────────
-const reportsData = [
-  { id: 'R-1024', caseId: 'CS-1024', patient: 'Rahul Deshmukh', patientId: 'P-1021', test: 'Blood Smear', status: 'Pending Approval', version: 'v1', date: '06 Sep 2026' },
-  { id: 'R-1023', caseId: 'CS-1023', patient: 'Anita Shah',     patientId: 'P-1022', test: 'Blood Smear', status: 'Approved',         version: 'v1', date: '06 Sep 2026' },
-  { id: 'R-1021', caseId: 'CS-1021', patient: 'Sneha Kulkarni', patientId: 'P-1024', test: 'CBC + Blood Smear', status: 'Generated',   version: 'v1', date: '05 Sep 2026' },
-  { id: 'R-1019', caseId: 'CS-1019', patient: 'Priya Nair',     patientId: 'P-1026', test: 'Blood Smear', status: 'Approved',         version: 'v2', date: '04 Sep 2026' },
-  { id: 'R-1018', caseId: 'CS-1018', patient: 'Vikram Malhotra',patientId: 'P-1028', test: 'CBC + Blood Smear', status: 'Approved',   version: 'v1', date: '02 Sep 2026' },
-  { id: 'R-1015', caseId: 'CS-1015', patient: 'Deepika Rao',    patientId: 'P-1030', test: 'Blood Smear', status: 'Draft',            version: 'v1', date: '01 Sep 2026' },
-];
+// Removed static reportsData
 
 // ─── Status badge ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
@@ -373,10 +382,32 @@ const StatusBadge = ({ status }) => {
 
 // ─── Main Reports component ────────────────────────────────────────────────────
 export default function Reports() {
+  const [reportsData, setReportsData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('All');
   const [selectedReport, setSelectedReport] = useState(null);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/api/reports`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setReportsData(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
 
   const filtered = reportsData.filter(r => {
     const q = searchQuery.toLowerCase();

@@ -95,7 +95,16 @@ const CaseDetails = ({ caseData, onBack }) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [cellsToReview, setCellsToReview] = useState([]);
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const [reviewForm, setReviewForm] = useState({ reviewStatus: 'accepted', finalLabel: '', comment: '' });
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  const [images, setImages] = useState([]);
+
+  const fetchCaseData = () => {
     if (caseData._id) {
       fetch(`${API_URL}/api/cases/${caseData._id}/analyses`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -103,7 +112,18 @@ const CaseDetails = ({ caseData, onBack }) => {
       .then(res => res.json())
       .then(data => setAnalyses(data))
       .catch(err => console.error(err));
+
+      fetch(`${API_URL}/api/cases/${caseData._id}/images`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => setImages(data))
+      .catch(err => console.error(err));
     }
+  };
+
+  useEffect(() => {
+    fetchCaseData();
   }, [caseData._id, token]);
 
   const handleUploadImage = async (e) => {
@@ -125,6 +145,7 @@ const CaseDetails = ({ caseData, onBack }) => {
       }
       if(res.ok) {
         alert("Image uploaded successfully");
+        fetchCaseData(); // Refresh images after upload
       } else {
         const errText = await res.text();
         alert(`Upload failed: ${errText}`);
@@ -146,12 +167,102 @@ const CaseDetails = ({ caseData, onBack }) => {
       }
       if(res.ok) {
         alert("Analysis triggered successfully. Cases will update.");
+        fetchCaseData(); // Refresh analyses
       } else {
         const errText = await res.text();
         alert(`Analysis failed: ${errText}`);
       }
     } catch(err) {
       alert(`Analysis exception: ${err.message}`);
+    }
+  };
+
+  const handleStartReview = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/cases/${caseData._id}/cells`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCellsToReview(data);
+        setReviewIndex(0);
+        if (data.length > 0) {
+          const currentCell = data[0];
+          setReviewForm({ 
+            reviewStatus: currentCell.reviewStatus === 'pending' ? 'accepted' : currentCell.reviewStatus, 
+            finalLabel: currentCell.finalLabel || currentCell.subtype || currentCell.cellType, 
+            comment: currentCell.comment || '' 
+          });
+        }
+        setIsReviewModalOpen(true);
+      } else {
+        alert("Failed to fetch cells for review.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSaveCellReview = async () => {
+    const currentCell = cellsToReview[reviewIndex];
+    try {
+      setIsReviewing(true);
+      const res = await fetch(`${API_URL}/api/cells/${currentCell._id}/review`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(reviewForm)
+      });
+      if (res.ok) {
+        if (reviewIndex < cellsToReview.length - 1) {
+          const nextIndex = reviewIndex + 1;
+          setReviewIndex(nextIndex);
+          const nextCell = cellsToReview[nextIndex];
+          setReviewForm({ 
+            reviewStatus: nextCell.reviewStatus === 'pending' ? 'accepted' : nextCell.reviewStatus, 
+            finalLabel: nextCell.finalLabel || nextCell.subtype || nextCell.cellType, 
+            comment: nextCell.comment || '' 
+          });
+        } else {
+          // Last cell, complete the case
+          await fetch(`${API_URL}/api/cases/${caseData._id}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'completed' })
+          });
+          setIsReviewModalOpen(false);
+          alert("Case review completed.");
+          window.location.reload(); // Quick way to refresh
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsReviewing(false);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    try {
+      setIsGeneratingReport(true);
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const generatedBy = user ? (user._id || user.id) : null;
+
+      const res = await fetch(`${API_URL}/api/reports`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caseId: caseData._id, generatedBy })
+      });
+      if (res.ok) {
+        alert("Report generated successfully!");
+        window.location.reload();
+      } else {
+        alert("Failed to generate report.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsGeneratingReport(false);
     }
   };
 
@@ -309,23 +420,23 @@ const CaseDetails = ({ caseData, onBack }) => {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-800">Blood Smear Images</h3>
-                  <p className="text-[11px] text-slate-400 font-medium">5 fields uploaded</p>
+                  <p className="text-[11px] text-slate-400 font-medium">{images.length} {images.length === 1 ? 'field' : 'fields'} uploaded</p>
                 </div>
               </div>
-              <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50/60 hover:bg-teal-100/50 rounded-lg transition">View All Images</button>
             </div>
             <div className="grid grid-cols-5 gap-2.5 my-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex flex-col items-center">
-                  <div className="w-full aspect-square rounded-lg border border-slate-200 overflow-hidden p-1 bg-purple-50">
-                    <div className="w-full h-full rounded-md bg-[#F4E6ED] relative overflow-hidden flex items-center justify-center">
-                      <div className="absolute w-6 h-6 rounded-full bg-purple-600/60 blur-[0.5px]"></div>
-                      <div className="w-5 h-5 rounded-full bg-purple-900/70 border border-purple-300/40"></div>
-                    </div>
+              {images.length > 0 ? images.map((img, i) => (
+                <div key={img._id || i} className="flex flex-col items-center">
+                  <div className="w-full aspect-square rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center">
+                    <img src={`${API_URL}${img.filePath}`} alt={`Field ${i+1}`} className="w-full h-full object-cover" />
                   </div>
-                  <span className="text-[11px] font-medium text-slate-600 mt-1.5">Field {i+1}</span>
+                  <span className="text-[11px] font-medium text-slate-600 mt-1.5 truncate w-full text-center" title={img.metadata?.originalName}>{img.metadata?.originalName || `Field ${i+1}`}</span>
                 </div>
-              ))}
+              )) : (
+                <div className="col-span-5 py-4 text-center text-xs text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                  No images uploaded yet.
+                </div>
+              )}
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -351,37 +462,76 @@ const CaseDetails = ({ caseData, onBack }) => {
               <svg className="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
               <h3 className="text-xs font-bold text-slate-800">AI Analysis Summary</h3>
             </div>
-            <span className="px-2 py-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 rounded-full border border-emerald-200/60">Completed</span>
+            {analyses.length > 0 && analyses[0].results ? (
+              <span className="px-2 py-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 rounded-full border border-emerald-200/60">Completed</span>
+            ) : (
+              <span className="px-2 py-0.5 text-[10px] font-semibold text-slate-600 bg-slate-50 rounded-full border border-slate-200/60">Pending</span>
+            )}
           </div>
-          <div className="space-y-1 text-xs border-b border-slate-100 pb-2.5">
-            {[['Total Cells','482'],['RBC','389'],['WBC','78'],['Platelets','15']].map(([k,v]) => (
-              <div key={k} className="flex justify-between py-0.5"><span className="text-slate-500 font-medium">{k}</span><span className="text-slate-900 font-bold">{v}</span></div>
-            ))}
-          </div>
-          <div className="mt-2.5">
-            <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">WBC Differential</h4>
-            <div className="space-y-1 text-xs">
-              {[['Neutrophils','42'],['Lymphocytes','18'],['Monocytes','8'],['Eosinophils','6'],['Basophils','2'],['Myeloblasts','2']].map(([k,v]) => (
-                <div key={k} className="flex justify-between py-0.5"><span className="text-slate-500 font-medium">{k}</span><span className="text-slate-800 font-medium">{v}</span></div>
-              ))}
+
+          {analyses.length > 0 && analyses[0].results ? (
+            <>
+              <div className="space-y-1 text-xs border-b border-slate-100 pb-2.5">
+                {[
+                  ['Total Cells', analyses[0].results.totalCells],
+                  ['RBC', analyses[0].results.rbcCount],
+                  ['WBC', analyses[0].results.wbcCount],
+                  ['Platelets', analyses[0].results.plateletCount]
+                ].map(([k,v]) => (
+                  <div key={k} className="flex justify-between py-0.5"><span className="text-slate-500 font-medium">{k}</span><span className="text-slate-900 font-bold">{v !== undefined ? v : '-'}</span></div>
+                ))}
+              </div>
+              <div className="mt-2.5">
+                <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">WBC Differential</h4>
+                <div className="space-y-1 text-xs">
+                  {analyses[0].results.wbcSubtypes && Object.entries(analyses[0].results.wbcSubtypes).map(([k,v]) => (
+                    <div key={k} className="flex justify-between py-0.5"><span className="text-slate-500 font-medium capitalize">{k}</span><span className="text-slate-800 font-medium">{v}</span></div>
+                  ))}
+                  {(!analyses[0].results.wbcSubtypes || Object.keys(analyses[0].results.wbcSubtypes).length === 0) && (
+                    <div className="text-slate-400 italic">No WBC subtypes detected</div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-slate-400 text-xs italic">
+              AI analysis results will appear here once processing is complete.
             </div>
-          </div>
+          )}
         </article>
 
         <article className="lg:col-span-3 bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
           <div className="space-y-4">
             <h3 className="text-xs font-bold text-slate-800">AI Findings</h3>
-            <ul className="space-y-2 text-xs">
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 mt-1.5"></span><span className="text-slate-600 font-medium">{caseData.finding}</span></li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 mt-1.5"></span><span className="text-slate-600 font-medium">Possible morphological anomaly</span></li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5"></span><span className="text-slate-600 font-medium">Low-confidence classification in some cells</span></li>
-            </ul>
+            
+            {analyses.length > 0 && analyses[0].results ? (
+              <ul className="space-y-2 text-xs">
+                {analyses[0].results.qualityReasons && analyses[0].results.qualityReasons.length > 0 ? (
+                  analyses[0].results.qualityReasons.map((reason, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5"></span>
+                      <span className="text-slate-600 font-medium">{reason}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5"></span>
+                    <span className="text-slate-600 font-medium">Quality looks good. No major anomalies detected.</span>
+                  </li>
+                )}
+              </ul>
+            ) : (
+              <div className="text-slate-400 text-xs italic">Awaiting findings...</div>
+            )}
+
             <div className="pt-2 border-t border-slate-100">
               <span className="text-xs text-slate-500 font-medium">Confidence Score</span>
-              <div className="text-base font-bold text-slate-900 my-1.5">{caseData.confidence ? `${caseData.confidence}%` : 'Processing...'}</div>
-              {caseData.confidence && (
+              <div className="text-base font-bold text-slate-900 my-1.5">
+                {analyses.length > 0 && analyses[0].confidence !== undefined ? `${(analyses[0].confidence * (analyses[0].confidence <= 1 ? 100 : 1)).toFixed(1)}%` : 'Processing...'}
+              </div>
+              {analyses.length > 0 && analyses[0].confidence !== undefined && (
                 <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-teal-600 rounded-full" style={{width:`${caseData.confidence}%`}}></div>
+                  <div className="h-full bg-teal-600 rounded-full" style={{width:`${analyses[0].confidence * (analyses[0].confidence <= 1 ? 100 : 1)}%`}}></div>
                 </div>
               )}
             </div>
@@ -418,7 +568,10 @@ const CaseDetails = ({ caseData, onBack }) => {
             </div>
           </div>
           <div className="pt-4">
-            <button className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition shadow-sm">
+            <button 
+              className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition shadow-sm"
+              onClick={handleStartReview}
+            >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" x2="19" y1="8" y2="14"></line><line x1="22" x2="16" y1="11" y2="11"></line></svg>
               Start Review
             </button>
@@ -440,9 +593,13 @@ const CaseDetails = ({ caseData, onBack }) => {
             </div>
           </div>
           <div className="pt-4">
-            <button className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100/80 hover:bg-slate-200 border border-slate-200/80 rounded-lg transition shadow-sm">
+            <button 
+              className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100/80 hover:bg-slate-200 border border-slate-200/80 rounded-lg transition shadow-sm"
+              onClick={handleGenerateReport}
+              disabled={isGeneratingReport}
+            >
               <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-              Generate Report
+              {isGeneratingReport ? 'Generating...' : 'Generate Report'}
             </button>
           </div>
         </article>
@@ -537,11 +694,93 @@ const CaseDetails = ({ caseData, onBack }) => {
           </div>
         </div>
       )}
+
+      {/* Cell Review Modal */}
+      {isReviewModalOpen && cellsToReview.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              <div className="flex items-center gap-3 text-teal-700 mb-4">
+                <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined">rate_review</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Review Cells ({reviewIndex + 1}/{cellsToReview.length})</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-slate-500">AI Classification:</span>
+                    <span className="font-semibold text-slate-800">{cellsToReview[reviewIndex].cellType}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Confidence:</span>
+                    <span className="font-semibold text-slate-800">{cellsToReview[reviewIndex].confidence ? cellsToReview[reviewIndex].confidence.toFixed(2) : '-'}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Review Decision</label>
+                  <select 
+                    className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    value={reviewForm.reviewStatus}
+                    onChange={(e) => setReviewForm({ ...reviewForm, reviewStatus: e.target.value })}
+                  >
+                    <option value="accepted">Accept AI Result</option>
+                    <option value="reclassified">Reclassify</option>
+                    <option value="unknown">Mark as Unknown</option>
+                  </select>
+                </div>
+
+                {reviewForm.reviewStatus === 'reclassified' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Correct Label</label>
+                    <input 
+                      type="text" 
+                      className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                      value={reviewForm.finalLabel}
+                      onChange={(e) => setReviewForm({ ...reviewForm, finalLabel: e.target.value })}
+                      placeholder="e.g. Neutrophil, Blast..."
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Comment (Optional)</label>
+                  <textarea 
+                    className="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500 resize-none"
+                    rows="2"
+                    value={reviewForm.comment}
+                    onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                    placeholder="Add a reviewer note..."
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <button 
+                onClick={() => setIsReviewModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                disabled={isReviewing}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveCellReview}
+                disabled={isReviewing}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-teal-600 border border-transparent rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-70"
+              >
+                {isReviewing ? 'Saving...' : (reviewIndex === cellsToReview.length - 1 ? 'Save & Complete' : 'Save & Next')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
 
-export default function Cases({ initialCase }) {
+export default function Cases({ initialCase, newCasePatientId }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [testFilter, setTestFilter] = useState('All');
@@ -599,7 +838,7 @@ export default function Cases({ initialCase }) {
           date: new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           finding: c.finding || '-',
           confidence: c.confidence,
-          status: c.status === 'draft' ? 'Draft' : c.status === 'review_pending' ? 'Review Required' : c.status === 'verified' ? 'Verified' : 'AI Processing',
+          status: c.status === 'draft' ? 'Draft' : c.status === 'review_required' ? 'Review Required' : c.status === 'verified' ? 'Verified' : 'AI Processing',
           priority: c.priority || 'Medium',
           colorType: c.colorType || 'neutral'
         }));
@@ -624,6 +863,19 @@ export default function Cases({ initialCase }) {
   useEffect(() => {
     if (initialCase) setSelectedCase(initialCase);
   }, [initialCase]);
+
+  useEffect(() => {
+    if (newCasePatientId && !loading && patients.length > 0) {
+      const nextIdNum = cases.length > 0 ? Math.max(...cases.map(c => parseInt(c.id.replace(/[^0-9]/g, '')) || 0)) + 1 : 100;
+      setModalSampleId(`S-${nextIdNum}`);
+      setModalPatient(newCasePatientId);
+      setModalTestType('Blood Smear (Peripheral)');
+      setModalPriority('Medium');
+      setModalImageFile(null);
+      if (formRef.current) formRef.current.reset();
+      setIsModalOpen(true);
+    }
+  }, [newCasePatientId, loading, patients.length]);
 
   useEffect(() => {
     fetchCasesAndPatients();

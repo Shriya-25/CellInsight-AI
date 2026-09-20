@@ -34,20 +34,56 @@ const CustomSelect = ({ value, onChange, options }) => {
   );
 };
 
-const queueData = [
-  { id: 'CS-1024', patient: 'Rahul Deshmukh', patientId: 'P-1021', test: 'CBC + Blood Smear', finding: 'Abnormal cell pattern', confidence: 94.6, priority: 'High', waiting: '2h 14m', status: 'Review Required' },
-  { id: 'CS-1021', patient: 'Sneha Kulkarni', patientId: 'P-1024', test: 'CBC + Blood Smear', finding: 'Possible cell anomaly', confidence: 88.1, priority: 'High', waiting: '1h 42m', status: 'Review Required' },
-  { id: 'CS-1019', patient: 'Priya Nair', patientId: 'P-1026', test: 'Blood Smear', finding: 'Low-confidence classification', confidence: 81.3, priority: 'Medium', waiting: '48m', status: 'In Review' },
-  { id: 'CS-1018', patient: 'Neha Kulkarni', patientId: 'P-1027', test: 'Blood Smear', finding: 'Possible morphological anomaly', confidence: 79.8, priority: 'Medium', waiting: '35m', status: 'Review Required' },
-  { id: 'CS-1017', patient: 'Amit Sharma', patientId: 'P-1028', test: 'Blood Smear', finding: 'Borderline WBC count', confidence: 76.2, priority: 'Low', waiting: '22m', status: 'Review Required' },
-  { id: 'CS-1015', patient: 'Deepika Rao', patientId: 'P-1030', test: 'CBC + Blood Smear', finding: 'Suspected blast cells', confidence: 91.0, priority: 'High', waiting: '3h 5m', status: 'In Review' },
-];
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function ReviewQueue() {
+  const [queueData, setQueueData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [testFilter, setTestFilter] = useState('All');
+
+  useEffect(() => {
+    const fetchQueue = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/api/cases`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.status === 401 || res.status === 403) {
+          window.dispatchEvent(new Event('cellinsight_auth_error'));
+          return;
+        }
+        if (res.ok) {
+          const casesData = await res.json();
+          const reviewCases = casesData
+            .filter(c => c.status === 'review_required')
+            .map(c => ({
+              _id: c._id,
+              id: c.caseId || c._id.slice(-6).toUpperCase(),
+              patient: c.subjectId?.name || 'Unknown',
+              patientId: c.subjectId?.patientIdentifier || '-',
+              test: c.test || 'Blood Smear',
+              date: new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+              finding: c.finding || '-',
+              confidence: c.confidence || 0,
+              priority: c.priority || 'Medium',
+              waiting: 'Pending',
+              status: 'Review Required',
+              colorType: c.colorType || 'warning',
+              originalCase: c
+            }));
+          setQueueData(reviewCases);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchQueue();
+  }, []);
 
   const filtered = queueData.filter(c => {
     const q = searchQuery.toLowerCase();
@@ -240,6 +276,9 @@ export default function ReviewQueue() {
                     <button
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#0d9488] hover:bg-teal-700 rounded-lg transition shadow-sm"
                       type="button"
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('cellinsight_navigate', { detail: { view: 'cases', openCase: c } }));
+                      }}
                     >
                       <span className="material-symbols-outlined text-[14px]">rate_review</span>
                       Review

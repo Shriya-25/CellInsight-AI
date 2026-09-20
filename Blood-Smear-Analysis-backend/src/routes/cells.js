@@ -26,7 +26,28 @@ router.patch('/:id/review', async (req, res) => {
       return res.status(404).json({ error: 'Cell not found.' });
     }
 
-    // Ideally, we'd also log to AuditEvent here as per Phase 1/2 requirements.
+    // Log to AuditEvent
+    if (reviewerId) {
+      const AuditEvent = (await import('../models/AuditEvent.js')).default;
+      const Analysis = (await import('../models/Analysis.js')).default;
+      
+      const analysis = await Analysis.findById(updatedCell.analysisId);
+      const caseId = analysis ? analysis.caseId : null;
+
+      await AuditEvent.create({
+        action: 'CELL_REVIEWED',
+        performedBy: reviewerId,
+        targetResource: {
+          resourceType: 'Cell',
+          resourceId: updatedCell._id
+        },
+        details: {
+          reviewStatus,
+          finalLabel,
+          comment
+        }
+      });
+    }
 
     return res.json(updatedCell);
   } catch (error) {

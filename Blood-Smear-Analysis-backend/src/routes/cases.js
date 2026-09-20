@@ -42,7 +42,7 @@ router.get('/', async (req, res) => {
       let confidence = null;
       let colorType = 'processing';
 
-      if (c.status === 'review_pending' || c.status === 'completed' || c.status === 'verified') {
+      if (c.status === 'review_required' || c.status === 'completed' || c.status === 'approved') {
         const images = await ImageModel.find({ caseId: c._id });
         if (images.length > 0) {
           const imageIds = images.map(img => img._id);
@@ -154,6 +154,18 @@ router.post('/:id/images', uploadToDisk.single('image'), async (req, res) => {
   }
 });
 
+// GET /api/cases/:id/images - Get all images for a case
+router.get('/:id/images', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const images = await ImageModel.find({ caseId: id });
+    return res.json(images);
+  } catch (error) {
+    console.error('Error fetching images:', error);
+    return res.status(500).json({ error: 'Failed to fetch images.' });
+  }
+});
+
 // POST /api/cases/:id/analyze - Run AI analysis on the case's images
 router.post('/:id/analyze', async (req, res) => {
   try {
@@ -237,7 +249,7 @@ router.post('/:id/analyze', async (req, res) => {
       });
       
       // Update case status
-      await Case.findByIdAndUpdate(id, { status: 'review_pending' });
+      await Case.findByIdAndUpdate(id, { status: 'review_required' });
     }
 
     return res.status(200).json({ message: 'Analysis complete', results: analysisResults });
@@ -260,6 +272,48 @@ router.get('/:id/analyses', async (req, res) => {
   } catch (error) {
     console.error('Error fetching analyses:', error);
     return res.status(500).json({ error: 'Failed to fetch analyses.' });
+  }
+});
+
+// GET /api/cases/:id/cells - Get all cells for a case's analyses
+router.get('/:id/cells', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const images = await ImageModel.find({ caseId: id });
+    const imageIds = images.map(img => img._id);
+    const analyses = await Analysis.find({ imageId: { $in: imageIds } });
+    const analysisIds = analyses.map(a => a._id);
+
+    const cells = await Cell.find({ analysisId: { $in: analysisIds } }).populate('reviewerId', 'name email');
+    return res.json(cells);
+  } catch (error) {
+    console.error('Error fetching cells:', error);
+    return res.status(500).json({ error: 'Failed to fetch cells.' });
+  }
+});
+
+// PATCH /api/cases/:id - Update case status/priority/etc.
+router.patch('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, priority, assignedTo, notes } = req.body;
+    
+    const updateData = { $set: {} };
+    if (status) updateData.$set.status = status;
+    if (priority) updateData.$set.priority = priority;
+    if (assignedTo) updateData.$set.assignedTo = assignedTo;
+    if (notes) updateData.$set.notes = notes;
+
+    const updatedCase = await Case.findByIdAndUpdate(id, updateData, { new: true });
+    
+    if (!updatedCase) {
+      return res.status(404).json({ error: 'Case not found.' });
+    }
+
+    return res.json(updatedCase);
+  } catch (error) {
+    console.error('Error updating case:', error);
+    return res.status(500).json({ error: 'Failed to update case.' });
   }
 });
 

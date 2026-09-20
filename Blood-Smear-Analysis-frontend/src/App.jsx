@@ -23,6 +23,7 @@ function App() {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem("user") || "null"));
   const [currentView, setCurrentView] = useState(getInitialView());
   const [initialCase, setInitialCase] = useState(null);
+  const [newCasePatientId, setNewCasePatientId] = useState(null);
 
   const handleLoginSuccess = (newToken, newUser) => {
     localStorage.setItem("token", newToken);
@@ -43,9 +44,10 @@ function App() {
   // Listen for cross-component navigation (e.g. "View Case" from Patient Profile)
   useEffect(() => {
     const handleCrossNav = (e) => {
-      const { view, openCase } = e.detail || {};
+      const { view, openCase, newCasePatientId } = e.detail || {};
       if (view) {
         setInitialCase(openCase || null);
+        setNewCasePatientId(newCasePatientId || null);
         setCurrentView(view);
       }
     };
@@ -96,14 +98,14 @@ function App() {
   return (
     <Layout 
       currentView={currentView} 
-      onNavigate={(view) => { setInitialCase(null); setCurrentView(view); }} 
+      onNavigate={(view) => { setInitialCase(null); setNewCasePatientId(null); setCurrentView(view); }} 
       user={user} 
       onLogout={handleLogout}
     >
       {currentView === 'dashboard' && <Dashboard />}
       {currentView === 'image-analysis' && <ImageAnalysis token={token} />}
       {currentView === 'patients' && <Patients />}
-      {currentView === 'cases' && <Cases initialCase={initialCase} />}
+      {currentView === 'cases' && <Cases initialCase={initialCase} newCasePatientId={newCasePatientId} />}
       {currentView === 'review-queue' && <ReviewQueue />}
       {currentView === 'reports' && <Reports />}
       {currentView === 'settings' && <Settings />}
