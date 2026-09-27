@@ -183,23 +183,50 @@ const CaseDetails = ({ caseData, onBack }) => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        const data = await res.json();
+        const rawData = await res.json();
+        const data = rawData.filter(c => c.reviewPriority > 0.3); // Only review low confidence cells
+        
+        if (data.length === 0) {
+           await fetch(`${API_URL}/api/cases/${caseData._id}`, {
+             method: 'PATCH',
+             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+             body: JSON.stringify({ status: 'completed' })
+           });
+           alert("No cells require manual review based on AI confidence. Case auto-completed!");
+           window.location.reload();
+           return;
+        }
+
         setCellsToReview(data);
         setReviewIndex(0);
-        if (data.length > 0) {
-          const currentCell = data[0];
-          setReviewForm({ 
-            reviewStatus: currentCell.reviewStatus === 'pending' ? 'accepted' : currentCell.reviewStatus, 
-            finalLabel: currentCell.finalLabel || currentCell.subtype || currentCell.cellType, 
-            comment: currentCell.comment || '' 
-          });
-        }
+        const currentCell = data[0];
+        setReviewForm({ 
+          reviewStatus: currentCell.reviewStatus === 'pending' ? 'accepted' : currentCell.reviewStatus, 
+          finalLabel: currentCell.finalLabel || currentCell.subtype || currentCell.cellType, 
+          comment: currentCell.comment || '' 
+        });
         setIsReviewModalOpen(true);
       } else {
         alert("Failed to fetch cells for review.");
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleFastApprove = async () => {
+    if (!window.confirm("Are you sure you want to approve all AI classifications without manual review?")) return;
+    try {
+      await fetch(`${API_URL}/api/cases/${caseData._id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' })
+      });
+      alert("Case approved successfully.");
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to approve case.");
     }
   };
 
@@ -428,7 +455,7 @@ const CaseDetails = ({ caseData, onBack }) => {
               {images.length > 0 ? images.map((img, i) => (
                 <div key={img._id || i} className="flex flex-col items-center">
                   <div className="w-full aspect-square rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center">
-                    <img src={`${API_URL}${img.filePath}`} alt={`Field ${i+1}`} className="w-full h-full object-cover" />
+                    <img src={img.filePath.startsWith('http') ? img.filePath : `${API_URL}${img.filePath}`} alt={`Field ${i+1}`} className="w-full h-full object-cover" />
                   </div>
                   <span className="text-[11px] font-medium text-slate-600 mt-1.5 truncate w-full text-center" title={img.metadata?.originalName}>{img.metadata?.originalName || `Field ${i+1}`}</span>
                 </div>
@@ -567,13 +594,20 @@ const CaseDetails = ({ caseData, onBack }) => {
               <div className="flex items-start gap-2"><span className="text-slate-400 shrink-0">Notes</span><span className="text-slate-600">No review completed yet.</span></div>
             </div>
           </div>
-          <div className="pt-4">
+          <div className="pt-4 flex gap-2">
             <button 
-              className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition shadow-sm"
+              className="w-full inline-flex items-center justify-center gap-1.5 px-2 py-2 text-[11px] font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition shadow-sm"
               onClick={handleStartReview}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" x2="19" y1="8" y2="14"></line><line x1="22" x2="16" y1="11" y2="11"></line></svg>
-              Start Review
+              Review Flags
+            </button>
+            <button 
+              className="w-full inline-flex items-center justify-center gap-1.5 px-2 py-2 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition shadow-sm"
+              onClick={handleFastApprove}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
+              Fast Approve
             </button>
           </div>
         </article>
@@ -838,7 +872,7 @@ export default function Cases({ initialCase, newCasePatientId }) {
           date: new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           finding: c.finding || '-',
           confidence: c.confidence,
-          status: c.status === 'draft' ? 'Draft' : c.status === 'review_required' ? 'Review Required' : c.status === 'verified' ? 'Verified' : 'AI Processing',
+          status: c.status === 'draft' ? 'AI Processing' : (['review_required', 'review_pending'].includes(c.status) ? 'Review Required' : (['verified', 'completed', 'approved'].includes(c.status) ? 'Verified' : 'AI Processing')),
           priority: c.priority || 'Medium',
           colorType: c.colorType || 'neutral'
         }));

@@ -44,45 +44,48 @@ export default function ReviewQueue() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [testFilter, setTestFilter] = useState('All');
 
-  useEffect(() => {
-    const fetchQueue = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_URL}/api/cases`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.status === 401 || res.status === 403) {
-          window.dispatchEvent(new Event('cellinsight_auth_error'));
-          return;
-        }
-        if (res.ok) {
-          const casesData = await res.json();
-          const reviewCases = casesData
-            .filter(c => c.status === 'review_required')
-            .map(c => ({
-              _id: c._id,
-              id: c.caseId || c._id.slice(-6).toUpperCase(),
-              patient: c.subjectId?.name || 'Unknown',
-              patientId: c.subjectId?.patientIdentifier || '-',
-              test: c.test || 'Blood Smear',
-              date: new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-              finding: c.finding || '-',
-              confidence: c.confidence || 0,
-              priority: c.priority || 'Medium',
-              waiting: 'Pending',
-              status: 'Review Required',
-              colorType: c.colorType || 'warning',
-              originalCase: c
-            }));
-          setQueueData(reviewCases);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+  const fetchQueue = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/cases`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.status === 401 || res.status === 403) {
+        window.dispatchEvent(new Event('cellinsight_auth_error'));
+        return;
       }
-    };
+      if (res.ok) {
+        const casesData = await res.json();
+        const reviewCases = casesData
+          .filter(c => c.status === 'review_required')
+          .map(c => ({
+            _id: c._id,
+            id: c.caseId || c._id.slice(-6).toUpperCase(),
+            patient: c.subjectId?.name || 'Unknown',
+            patientId: c.subjectId?.patientIdentifier || '-',
+            test: c.test || 'Blood Smear',
+            date: new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            finding: c.finding || '-',
+            confidence: c.confidence || 0,
+            priority: c.priority || 'Medium',
+            waiting: 'Pending',
+            status: 'Review Required',
+            colorType: c.colorType || 'warning',
+            originalCase: c
+          }));
+        setQueueData(reviewCases);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchQueue();
+    const interval = setInterval(fetchQueue, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const filtered = queueData.filter(c => {

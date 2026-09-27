@@ -27,10 +27,12 @@ import path from "path";
 app.use("/api/auth", authRoutes);
 import subjectRoutes from "./routes/subjects.js";
 import reportRoutes from "./routes/reports.js";
+import dashboardRoutes from "./routes/dashboard.js";
 app.use("/api/subjects", authenticateToken, subjectRoutes);
 app.use("/api/cases", authenticateToken, caseRoutes);
 app.use("/api/cells", authenticateToken, cellRoutes);
 app.use("/api/reports", authenticateToken, reportRoutes);
+app.use("/api/dashboard", authenticateToken, dashboardRoutes);
 
 // Serve uploads statically
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));

@@ -81,32 +81,6 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
             </div>
             
             <div>
-              <div className="px-space-md py-space-xs font-label-sm text-label-sm uppercase tracking-wider text-outline font-medium">Analysis</div>
-              <div className="mt-space-xs space-y-0.5">
-                <a 
-                  href="#" 
-                  onClick={(e) => { e.preventDefault(); onNavigate('image-analysis'); }}
-                  className={`flex items-center justify-between px-space-md py-2 transition-colors rounded-xl ${currentView === 'image-analysis' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}`}
-                >
-                  <div className="flex items-center gap-space-md">
-                    <span className="material-symbols-outlined text-[18px]">biotech</span>
-                    <span className="font-body-md text-body-md">Image Analysis</span>
-                  </div>
-                </a>
-                <a 
-                  href="#" 
-                  onClick={(e) => { e.preventDefault(); onNavigate('review-queue'); }}
-                  className={`flex items-center justify-between px-space-md py-2 transition-colors rounded-xl ${currentView === 'review-queue' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}`}
-                >
-                  <div className="flex items-center gap-space-md">
-                    <span className="material-symbols-outlined text-[18px]">fact_check</span>
-                    <span className="font-body-md text-body-md">Review Queue</span>
-                  </div>
-                </a>
-              </div>
-            </div>
-            
-            <div>
               <div className="px-space-md py-space-xs font-label-sm text-label-sm uppercase tracking-wider text-outline font-medium">Reporting</div>
               <div className="mt-space-xs space-y-0.5">
                 <a 

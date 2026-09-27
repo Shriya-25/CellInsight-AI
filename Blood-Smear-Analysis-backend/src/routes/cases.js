@@ -42,7 +42,7 @@ router.get('/', async (req, res) => {
       let confidence = null;
       let colorType = 'processing';
 
-      if (c.status === 'review_required' || c.status === 'completed' || c.status === 'approved') {
+      if (['review_required', 'review_pending', 'completed', 'approved', 'verified'].includes(c.status)) {
         const images = await ImageModel.find({ caseId: c._id });
         if (images.length > 0) {
           const imageIds = images.map(img => img._id);
@@ -53,8 +53,8 @@ router.get('/', async (req, res) => {
             colorType = confidence && confidence < 80 ? 'warning' : 'success';
           }
         }
-      } else if (c.status === 'draft') {
-         finding = 'Awaiting images';
+      } else if (c.status === 'draft' || c.status === 'processing') {
+         finding = 'Processing pending...';
          colorType = 'neutral';
       }
       
@@ -133,12 +133,31 @@ router.post('/:id/images', uploadToDisk.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'An image file is required.' });
     }
 
+    const IMGBB_API_KEY = process.env.IMGBB_API_KEY;
+    if (!IMGBB_API_KEY) {
+      return res.status(500).json({ error: 'IMGBB_API_KEY is missing from the environment variables.' });
+    }
+
+    // Upload to ImgBB
+    const formData = new URLSearchParams();
+    formData.append('image', req.file.buffer.toString('base64'));
+
+    const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const imgbbData = await imgbbRes.json();
+    if (!imgbbRes.ok || !imgbbData.success) {
+      throw new Error(imgbbData.error?.message || 'ImgBB upload failed');
+    }
+
+    const imageUrl = imgbbData.data.url;
+
     // Save image metadata to MongoDB
-    const relativePath = `/uploads/cases/${id}/${req.file.filename}`;
-    
     const newImage = new ImageModel({
       caseId: id,
-      filePath: relativePath,
+      filePath: imageUrl, // Storing the remote URL
       metadata: {
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
@@ -181,16 +200,29 @@ router.post('/:id/analyze', async (req, res) => {
 
     // For MVP, we'll process each image sequentially
     for (const image of images) {
-      const fullPath = path.join(process.cwd(), image.filePath);
-      
-      if (!fs.existsSync(fullPath)) {
-        continue;
+      let fileBuffer;
+      let originalName = image.metadata.originalName || 'image.jpg';
+      let mimeType = image.metadata.mimeType || 'image/jpeg';
+
+      if (image.filePath.startsWith('http')) {
+        const response = await fetch(image.filePath);
+        if (!response.ok) {
+           console.error(`Failed to download ${image.filePath} for inference.`);
+           continue;
+        }
+        fileBuffer = await response.arrayBuffer();
+      } else {
+        // Fallback for old local images
+        const fullPath = path.join(process.cwd(), image.filePath);
+        if (!fs.existsSync(fullPath)) {
+          continue;
+        }
+        fileBuffer = fs.readFileSync(fullPath);
       }
 
-      const fileBuffer = fs.readFileSync(fullPath);
-      const blob = new Blob([fileBuffer], { type: image.metadata.mimeType || 'image/jpeg' });
+      const blob = new Blob([fileBuffer], { type: mimeType });
       const formData = new FormData();
-      formData.append("file", blob, image.metadata.originalName || 'image.jpg');
+      formData.append("file", blob, originalName);
 
       const inferenceResponse = await fetch(`${INFERENCE_URL}/predict`, {
         method: "POST",
@@ -247,10 +279,10 @@ router.post('/:id/analyze', async (req, res) => {
         imageId: image._id,
         summary: savedAnalysis.results
       });
-      
-      // Update case status
-      await Case.findByIdAndUpdate(id, { status: 'review_required' });
     }
+      
+    // Update case status at the end regardless if some images failed
+    await Case.findByIdAndUpdate(id, { status: 'review_required' });
 
     return res.status(200).json({ message: 'Analysis complete', results: analysisResults });
 

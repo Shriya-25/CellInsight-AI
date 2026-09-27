@@ -3,10 +3,8 @@ import "./App.css";
 import Login from "./Login.jsx";
 import Layout from "./Layout.jsx";
 import Dashboard from "./Dashboard.jsx";
-import ImageAnalysis from "./ImageAnalysis.jsx";
 import Patients from "./Patients.jsx";
 import Cases from "./Cases.jsx";
-import ReviewQueue from "./ReviewQueue.jsx";
 import Reports from "./Reports.jsx";
 import Settings from "./Settings.jsx";
 import Profile from "./Profile.jsx";
@@ -103,10 +101,8 @@ function App() {
       onLogout={handleLogout}
     >
       {currentView === 'dashboard' && <Dashboard />}
-      {currentView === 'image-analysis' && <ImageAnalysis token={token} />}
       {currentView === 'patients' && <Patients />}
       {currentView === 'cases' && <Cases initialCase={initialCase} newCasePatientId={newCasePatientId} />}
-      {currentView === 'review-queue' && <ReviewQueue />}
       {currentView === 'reports' && <Reports />}
       {currentView === 'settings' && <Settings />}
       {currentView === 'profile' && <Profile />}
