@@ -137,6 +137,11 @@ router.post('/:id/images', uploadToDisk.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'An image file is required.' });
     }
 
+    const imageCount = await ImageModel.countDocuments({ caseId: id });
+    if (imageCount >= 3) {
+      return res.status(400).json({ error: 'Maximum of 3 microscopy fields allowed per case.' });
+    }
+
     const IMGBB_API_KEY = process.env.IMGBB_API_KEY;
     if (!IMGBB_API_KEY) {
       return res.status(500).json({ error: 'IMGBB_API_KEY is missing from the environment variables.' });
@@ -204,6 +209,13 @@ router.post('/:id/analyze', async (req, res) => {
 
     // For MVP, we'll process each image sequentially
     for (const image of images) {
+      // Skip already analyzed fields
+      const existingAnalysis = await Analysis.findOne({ imageId: image._id });
+      if (existingAnalysis) {
+        analysisResults.push(existingAnalysis);
+        continue;
+      }
+
       let fileBuffer;
       let originalName = image.metadata.originalName || 'image.jpg';
       let mimeType = image.metadata.mimeType || 'image/jpeg';

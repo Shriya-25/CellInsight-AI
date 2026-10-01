@@ -189,7 +189,7 @@ export default function Dashboard() {
                             <span className={`${c.priority === 'High' ? 'text-rose-700' : c.priority === 'Medium' ? 'text-amber-700' : 'text-emerald-700'} font-medium text-label-sm`}>{c.priority || 'Medium'}</span>
                           </td>
                           <td className="py-3 px-space-md text-secondary font-data-mono text-label-sm">{formatWaitingTime(c.updatedAt || c.createdAt)}</td>
-                          <td className="py-3 px-space-md text-right"><button onClick={() => window.dispatchEvent(new CustomEvent('cellinsight_navigate', { detail: { view: 'cases', caseObj: c } }))} className="px-3 py-1 rounded-lg bg-primary text-on-primary hover:bg-primary-container text-label-sm font-medium transition-all" type="button">Review</button></td>
+                          <td className="py-3 px-space-md text-right"><button onClick={() => window.dispatchEvent(new CustomEvent('cellinsight_navigate', { detail: { view: 'cases', openCase: c } }))} className="px-3 py-1 rounded-lg bg-primary text-on-primary hover:bg-primary-container text-label-sm font-medium transition-all" type="button">Review</button></td>
                         </tr>
                       ))
                     )}

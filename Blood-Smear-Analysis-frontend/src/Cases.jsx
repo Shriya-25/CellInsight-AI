@@ -108,6 +108,8 @@ const CaseDetails = ({ caseData, onBack }) => {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const [images, setImages] = useState([]);
+  const [cells, setCells] = useState([]);
+  const [reports, setReports] = useState([]);
 
   const fetchCaseData = () => {
     if (caseData._id) {
@@ -124,12 +126,43 @@ const CaseDetails = ({ caseData, onBack }) => {
       .then(res => res.json())
       .then(data => setImages(data))
       .catch(err => console.error(err));
+
+      fetch(`${API_URL}/api/cases/${caseData._id}/cells`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => setCells(data))
+      .catch(err => console.error(err));
+
+      fetch(`${API_URL}/api/reports`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+         setReports(data.filter(r => r.caseId && (r.caseId._id === caseData._id || r.caseId === caseData._id)));
+      })
+      .catch(err => console.error(err));
     }
   };
 
   useEffect(() => {
     fetchCaseData();
   }, [caseData._id, token]);
+
+  // Silently complete case if no review is required
+  useEffect(() => {
+    const isAnalyzed = analyses.length > 0 && analyses[0].results;
+    if (isAnalyzed && cells.length > 0 && caseData.status === 'review_required') {
+      const flaggedCells = cells.filter(c => c.reviewPriority > 0.3);
+      if (flaggedCells.length === 0) {
+        fetch(`${API_URL}/api/cases/${caseData._id}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'completed' })
+        }).catch(err => console.error("Silent complete failed:", err));
+      }
+    }
+  }, [analyses, cells, caseData.status, caseData._id, token]);
 
   const handleUploadImage = async (e) => {
     const selectedFile = e.target.files[0];
@@ -197,7 +230,6 @@ const CaseDetails = ({ caseData, onBack }) => {
              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
              body: JSON.stringify({ status: 'completed' })
            });
-           alert("No cells require manual review based on AI confidence. Case auto-completed!");
            window.location.reload();
            return;
         }
@@ -297,6 +329,74 @@ const CaseDetails = ({ caseData, onBack }) => {
       setIsGeneratingReport(false);
     }
   };
+
+  const flaggedCells = cells.filter(c => c.reviewPriority > 0.3);
+  const hasReviewFlags = flaggedCells.length > 0;
+  const isAnalyzed = analyses.length > 0 && analyses[0].results;
+
+  const getRecentActivity = () => {
+    const activities = [];
+
+    // 1. Case Created
+    if (caseData.createdAt) {
+      activities.push({
+        color: 'bg-blue-600',
+        time: new Date(caseData.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
+        timestamp: new Date(caseData.createdAt).getTime(),
+        label: 'Case created'
+      });
+    }
+
+    // 2. Microscopy Field Added
+    images.forEach((img, index) => {
+      if (img.createdAt) {
+        activities.push({
+          color: 'bg-slate-500',
+          time: new Date(img.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
+          timestamp: new Date(img.createdAt).getTime(),
+          label: `Microscopy Field Added (${index + 1})`
+        });
+      }
+    });
+
+    // 3. AI Analysis Completed
+    analyses.forEach((analysis) => {
+      if (analysis.createdAt) {
+        activities.push({
+          color: 'bg-teal-600',
+          time: new Date(analysis.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
+          timestamp: new Date(analysis.createdAt).getTime(),
+          label: 'AI analysis completed'
+        });
+      }
+    });
+
+    // 4. Expert Review Completed
+    if (['completed', 'verified', 'approved', 'Verified'].includes(caseData.status) && caseData.updatedAt && caseData.updatedAt !== caseData.createdAt) {
+        activities.push({
+          color: 'bg-emerald-600',
+          time: new Date(caseData.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
+          timestamp: new Date(caseData.updatedAt).getTime(),
+          label: 'Expert Review completed'
+        });
+    }
+    
+    // 5. Report Generated
+    reports.forEach(report => {
+      if (report.createdAt) {
+        activities.push({
+          color: 'bg-indigo-600',
+          time: new Date(report.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
+          timestamp: new Date(report.createdAt).getTime(),
+          label: 'Report generated'
+        });
+      }
+    });
+
+    return activities.sort((a, b) => b.timestamp - a.timestamp);
+  };
+  
+  const recentActivities = getRecentActivity();
 
   return (
     <div className="flex-1 max-w-[1536px] w-full mx-auto space-y-5 pb-10">
@@ -411,7 +511,7 @@ const CaseDetails = ({ caseData, onBack }) => {
             <div className={`h-full bg-emerald-500 transition-all duration-500 ${caseData.status === 'draft' ? 'w-[20%]' : caseData.status === 'processing' ? 'w-[40%]' : ['review_required', 'review_pending', 'Review Required'].includes(caseData.status) ? 'w-[60%]' : ['verified', 'completed', 'Verified'].includes(caseData.status) ? 'w-[80%]' : 'w-[100%]'}`}></div>
           </div>
           {[
-            { label: 'Image Upload', sub: `${images.length} images`, done: true },
+            { label: 'Field Upload', sub: `${images.length} fields`, done: true },
             { label: 'Quality Check', sub: caseData.status !== 'draft' ? 'Completed' : 'Pending', done: caseData.status !== 'draft', active: caseData.status === 'draft' },
             { label: 'AI Analysis', sub: caseData.status !== 'draft' ? caseData.date : 'Pending', done: !['draft', 'processing', 'AI Processing'].includes(caseData.status), active: ['processing', 'AI Processing'].includes(caseData.status) },
             { label: 'Expert Review', sub: null, done: ['verified', 'completed', 'approved', 'Verified'].includes(caseData.status), active: ['review_required', 'review_pending', 'Review Required'].includes(caseData.status) },
@@ -441,9 +541,9 @@ const CaseDetails = ({ caseData, onBack }) => {
         </div>
       </section>
 
-      {/* Middle Triple-Card Grid */}
+      {/* Middle Content */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        <article className="lg:col-span-6 bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+        <article className="lg:col-span-7 bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -451,35 +551,38 @@ const CaseDetails = ({ caseData, onBack }) => {
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect height="18" rx="2" ry="2" width="18" x="3" y="3"></rect><circle cx="9" cy="9" r="2"></circle><path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800">Blood Smear Images</h3>
-                  <p className="text-[11px] text-slate-400 font-medium">{images.length} {images.length === 1 ? 'field' : 'fields'} uploaded</p>
+                  <h3 className="text-sm font-bold text-slate-800">Microscopy Fields</h3>
+                  <p className="text-[11px] text-slate-400 font-medium">{images.length} / 3 fields uploaded</p>
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-5 gap-2.5 my-3">
-              {images.length > 0 ? images.map((img, i) => (
-                <div key={img._id || i} className="flex flex-col items-center">
-                  <div className="w-full aspect-square rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center">
-                    <img src={img.filePath.startsWith('http') ? img.filePath : `${API_URL}${img.filePath}`} alt={`Field ${i+1}`} className="w-full h-full object-cover" />
+            <div className="grid grid-cols-3 gap-2.5 my-3">
+              {images.length > 0 ? images.map((img, i) => {
+                const isAnalyzed = analyses.some(a => a.imageId === img._id);
+                return (
+                  <div key={img._id || i} className="flex flex-col items-center">
+                    <div className="w-full aspect-square rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center relative">
+                      <img src={img.filePath.startsWith('http') ? img.filePath : `${API_URL}${img.filePath}`} alt={`Field ${i+1}`} className="w-full h-full object-cover" />
+                    </div>
+                    <span className="text-[11px] font-medium text-slate-600 mt-1.5 truncate w-full text-center">Field {i+1}</span>
                   </div>
-                  <span className="text-[11px] font-medium text-slate-600 mt-1.5 truncate w-full text-center" title={img.metadata?.originalName}>{img.metadata?.originalName || `Field ${i+1}`}</span>
-                </div>
-              )) : (
-                <div className="col-span-5 py-4 text-center text-xs text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                  No images uploaded yet.
+                );
+              }) : (
+                <div className="col-span-3 py-4 text-center text-xs text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                  No fields uploaded yet.
                 </div>
               )}
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs">
-              <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">✓</span>
-              <span className="text-slate-600 font-medium">4 fields accepted <span className="text-slate-300 mx-1.5">|</span> 1 field needs review</span>
+              <span className={`w-4 h-4 rounded-full ${analyses.length === images.length && images.length > 0 ? 'bg-emerald-500' : 'bg-slate-300'} text-white flex items-center justify-center text-[10px]`}>✓</span>
+              <span className="text-slate-600 font-medium">{analyses.length} of {images.length} fields analyzed</span>
             </div>
             <input type="file" ref={fileInputRef} className="hidden" onChange={handleUploadImage} />
-            <button onClick={() => fileInputRef.current.click()} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 bg-white border border-teal-600 rounded-lg hover:bg-teal-50 transition">
+            <button onClick={() => fileInputRef.current.click()} disabled={images.length >= 3} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ${images.length >= 3 ? 'text-slate-400 bg-slate-100 border-slate-200 cursor-not-allowed' : 'text-teal-700 bg-white border-teal-600 hover:bg-teal-50'} border rounded-lg transition`}>
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
-              Add Image
+              Add Field
             </button>
             <button onClick={handleRunAnalysis} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-teal-600 border border-teal-600 rounded-lg hover:bg-teal-700 transition">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
@@ -488,11 +591,11 @@ const CaseDetails = ({ caseData, onBack }) => {
           </div>
         </article>
 
-        <article className="lg:col-span-3 bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-3">
+        <article className="lg:col-span-5 bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col gap-5">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <svg className="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-              <h3 className="text-xs font-bold text-slate-800">AI Analysis Summary</h3>
+              <h3 className="text-sm font-bold text-slate-800">AI Analysis</h3>
             </div>
             {analyses.length > 0 && analyses[0].results ? (
               <span className="px-2 py-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 rounded-full border border-emerald-200/60">Completed</span>
@@ -502,8 +605,8 @@ const CaseDetails = ({ caseData, onBack }) => {
           </div>
 
           {analyses.length > 0 && analyses[0].results ? (
-            <>
-              <div className="space-y-1 text-xs border-b border-slate-100 pb-2.5">
+            <div className="flex-1 flex flex-col gap-4">
+              <div className="space-y-1 text-xs">
                 {[
                   ['Total Cells', analyses[0].results.totalCells],
                   ['RBC', analyses[0].results.rbcCount],
@@ -513,7 +616,8 @@ const CaseDetails = ({ caseData, onBack }) => {
                   <div key={k} className="flex justify-between py-0.5"><span className="text-slate-500 font-medium">{k}</span><span className="text-slate-900 font-bold">{v !== undefined ? v : '-'}</span></div>
                 ))}
               </div>
-              <div className="mt-2.5">
+              
+              <div>
                 <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">WBC Differential</h4>
                 <div className="space-y-1 text-xs">
                   {analyses[0].results.wbcSubtypes && Object.entries(analyses[0].results.wbcSubtypes).map(([k,v]) => (
@@ -524,65 +628,48 @@ const CaseDetails = ({ caseData, onBack }) => {
                   )}
                 </div>
               </div>
-            </>
+
+              <div className="pt-3 border-t border-slate-100 flex flex-col gap-3">
+                <ul className="space-y-2 text-xs">
+                  {analyses[0].results.qualityReasons && analyses[0].results.qualityReasons.length > 0 ? (
+                    analyses[0].results.qualityReasons.map((reason, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5"></span>
+                        <span className="text-slate-600 font-medium">{reason}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5"></span>
+                      <span className="text-slate-600 font-medium">Quality looks good. No major anomalies detected.</span>
+                    </li>
+                  )}
+                </ul>
+
+                <div className="mt-1">
+                  <span className="text-xs text-slate-500 font-medium">Confidence Score</span>
+                  <div className="text-base font-bold text-slate-900 my-1">
+                    {analyses[0].confidence !== undefined ? `${formatConfidence(analyses[0].confidence)}%` : 'Processing...'}
+                  </div>
+                  {analyses[0].confidence !== undefined && (
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-teal-600 rounded-full" style={{width:`${formatConfidence(analyses[0].confidence)}%`}}></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-slate-400 text-xs italic">
+            <div className="flex-1 flex items-center justify-center text-slate-400 text-xs italic min-h-[200px]">
               AI analysis results will appear here once processing is complete.
             </div>
           )}
         </article>
-
-        <article className="lg:col-span-3 bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-800">AI Findings</h3>
-            
-            {analyses.length > 0 && analyses[0].results ? (
-              <ul className="space-y-2 text-xs">
-                {analyses[0].results.qualityReasons && analyses[0].results.qualityReasons.length > 0 ? (
-                  analyses[0].results.qualityReasons.map((reason, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5"></span>
-                      <span className="text-slate-600 font-medium">{reason}</span>
-                    </li>
-                  ))
-                ) : (
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5"></span>
-                    <span className="text-slate-600 font-medium">Quality looks good. No major anomalies detected.</span>
-                  </li>
-                )}
-              </ul>
-            ) : (
-              <div className="text-slate-400 text-xs italic">Awaiting findings...</div>
-            )}
-
-            <div className="pt-2 border-t border-slate-100">
-              <span className="text-xs text-slate-500 font-medium">Confidence Score</span>
-              <div className="text-base font-bold text-slate-900 my-1.5">
-                {analyses.length > 0 && analyses[0].confidence !== undefined ? `${formatConfidence(analyses[0].confidence)}%` : 'Processing...'}
-              </div>
-              {analyses.length > 0 && analyses[0].confidence !== undefined && (
-                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-teal-600 rounded-full" style={{width:`${formatConfidence(analyses[0].confidence)}%`}}></div>
-                </div>
-              )}
-            </div>
-            <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200/60 text-[11px] text-slate-500 leading-relaxed">
-              AI results are assistive and require expert verification.
-            </div>
-          </div>
-          <div className="pt-3">
-            <button className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-700 bg-white border border-teal-600 rounded-lg hover:bg-teal-50 transition">
-              View Full Analysis
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
-            </button>
-          </div>
-        </article>
       </section>
 
-      {/* Bottom Triple-Card Grid */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        <article className="lg:col-span-4 bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+      {/* Bottom Grids */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+        <article className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -591,25 +678,35 @@ const CaseDetails = ({ caseData, onBack }) => {
                 </div>
                 <h3 className="text-sm font-bold text-slate-800">Expert Review</h3>
               </div>
-              <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200/60 rounded-full">Pending</span>
+              {isAnalyzed ? (
+                hasReviewFlags ? (
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200/60 rounded-full">Review Required</span>
+                ) : (
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200/60 rounded-full">Review Not Required</span>
+                )
+              ) : (
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200/60 rounded-full">Pending</span>
+              )}
             </div>
             <div className="space-y-1.5 text-xs">
-              <div className="flex items-center gap-2"><span className="text-slate-400">Status</span><span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-600">Pending</span></div>
+              <div className="flex items-center gap-2"><span className="text-slate-400">Status</span><span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${isAnalyzed ? (hasReviewFlags ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600') : 'bg-slate-50 text-slate-500'}`}>{isAnalyzed ? (hasReviewFlags ? 'Review Required' : 'Review Not Required') : 'Pending Analysis'}</span></div>
               <div className="flex items-center gap-2"><span className="text-slate-400">Reviewer</span><span className="text-slate-700">Not Assigned</span></div>
-              <div className="flex items-start gap-2"><span className="text-slate-400 shrink-0">Notes</span><span className="text-slate-600">No review completed yet.</span></div>
+              <div className="flex items-start gap-2"><span className="text-slate-400 shrink-0">Notes</span><span className="text-slate-600">{!isAnalyzed ? 'Awaiting AI analysis.' : hasReviewFlags ? 'Manual verification of flagged cells needed.' : 'No AI flags detected.'}</span></div>
             </div>
           </div>
           <div className="pt-4 flex gap-2">
             <button 
-              className="w-full inline-flex items-center justify-center gap-1.5 px-2 py-2 text-[11px] font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition shadow-sm"
+              className={`w-full inline-flex items-center justify-center gap-1.5 px-2 py-2 text-[11px] font-semibold rounded-lg transition shadow-sm ${(!isAnalyzed || !hasReviewFlags) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'text-white bg-teal-700 hover:bg-teal-800'}`}
               onClick={handleStartReview}
+              disabled={!isAnalyzed || !hasReviewFlags}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" x2="19" y1="8" y2="14"></line><line x1="22" x2="16" y1="11" y2="11"></line></svg>
               Review Flags
             </button>
             <button 
-              className="w-full inline-flex items-center justify-center gap-1.5 px-2 py-2 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition shadow-sm"
+              className={`w-full inline-flex items-center justify-center gap-1.5 px-2 py-2 text-[11px] font-semibold rounded-lg transition shadow-sm ${(!isAnalyzed || !hasReviewFlags) ? 'bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed' : 'text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200'}`}
               onClick={handleFastApprove}
+              disabled={!isAnalyzed || !hasReviewFlags}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
               Fast Approve
@@ -617,7 +714,7 @@ const CaseDetails = ({ caseData, onBack }) => {
           </div>
         </article>
 
-        <article className="lg:col-span-4 bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+        <article className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded bg-teal-50 text-teal-700 flex items-center justify-center">
@@ -642,8 +739,10 @@ const CaseDetails = ({ caseData, onBack }) => {
             </button>
           </div>
         </article>
+      </section>
 
-        <article className="lg:col-span-4 bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col">
+      <section>
+        <article className="w-full bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded bg-teal-50 text-teal-700 flex items-center justify-center">
@@ -654,11 +753,7 @@ const CaseDetails = ({ caseData, onBack }) => {
           </div>
           <div className="space-y-3 mt-2 relative">
             <div className="absolute left-1 top-2 bottom-2 w-0.5 bg-slate-100"></div>
-            {[
-              { color: 'bg-teal-600', time: `${caseData.date}, 2:15 PM`, label: 'AI analysis completed' },
-              { color: 'bg-teal-600', time: `${caseData.date}, 11:20 AM`, label: 'Images uploaded (5 fields)' },
-              { color: 'bg-blue-600', time: `${caseData.date}, 10:24 AM`, label: 'Case created' },
-            ].map((item, i) => (
+            {recentActivities.length > 0 ? recentActivities.map((item, i) => (
               <div key={i} className="relative flex items-start gap-3 pl-0 text-xs">
                 <span className={`w-2.5 h-2.5 rounded-full ${item.color} ring-2 ring-white shrink-0 mt-1 z-10`}></span>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-1">
@@ -666,7 +761,9 @@ const CaseDetails = ({ caseData, onBack }) => {
                   <span className="text-slate-800 font-semibold">{item.label}</span>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-xs text-slate-400 pl-4 py-2 italic">No recent activity</div>
+            )}
           </div>
         </article>
       </section>
@@ -830,7 +927,7 @@ export default function Cases({ initialCase, newCasePatientId }) {
   const [modalPriority, setModalPriority] = useState('Medium');
   const [modalSampleId, setModalSampleId] = useState('');
   const [modalImageFile, setModalImageFile] = useState(null);
-  const [selectedCase, setSelectedCase] = useState(initialCase || null);
+  const [selectedCase, setSelectedCase] = useState(initialCase?.id ? initialCase : null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef(null);
   const modalFileInputRef = useRef(null);
@@ -905,9 +1002,17 @@ export default function Cases({ initialCase, newCasePatientId }) {
   };
 
   useEffect(() => {
-    if (initialCase) setSelectedCase(initialCase);
-  }, [initialCase]);
-
+    if (initialCase) {
+      if (initialCase.id) {
+        setSelectedCase(initialCase);
+      } else {
+        const matchingCase = cases.find(c => c._id === initialCase._id);
+        if (matchingCase) {
+          setSelectedCase(matchingCase);
+        }
+      }
+    }
+  }, [initialCase, cases]);
   useEffect(() => {
     if (newCasePatientId && !loading && patients.length > 0) {
       setModalSampleId('Auto-generated');
@@ -1341,11 +1446,12 @@ export default function Cases({ initialCase, newCasePatientId }) {
             
             {/* Blood Smear Image Upload Area */}
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Blood Smear Slide Images (Whole-Slide Scan or FOVs)</label>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Microscopy Field (Required)</label>
               <input 
                 type="file" 
                 ref={modalFileInputRef} 
                 className="hidden" 
+                required
                 onChange={(e) => setModalImageFile(e.target.files[0])} 
               />
               <div 
@@ -1366,10 +1472,10 @@ export default function Cases({ initialCase, newCasePatientId }) {
                       <span className="material-symbols-outlined text-[20px]">cloud_upload</span>
                     </div>
                     <p className="font-semibold text-slate-800">
-                      Drag &amp; drop specimen slide images or <span className="text-teal-600 hover:underline">browse</span>
+                      Drag &amp; drop microscopy field image or <span className="text-teal-600 hover:underline">browse</span>
                     </p>
                     <p className="text-slate-500 mt-1">
-                      Supports TIFF, SVS, NDPI, PNG, DICOM · Minimum 100x oil immersion fields recommended
+                      Supports PNG, JPG, JPEG · Minimum 100x oil immersion recommended
                     </p>
                   </>
                 )}
