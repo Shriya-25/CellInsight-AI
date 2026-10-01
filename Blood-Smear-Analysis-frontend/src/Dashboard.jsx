@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+const formatWaitingTime = (timestamp) => {
+  if (!timestamp) return '0 hrs';
+  const diff = Date.now() - new Date(timestamp).getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  return `${hours} hr${hours === 1 ? '' : 's'}`;
+};
+
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -102,7 +109,7 @@ export default function Dashboard() {
             </div>
             <div className="flex items-baseline gap-1 pt-1">
               <span className="text-[32px] font-semibold text-on-surface">{metrics.reviewed.toString().padStart(2, '0')}</span>
-              <span className="text-body-sm text-secondary">completed</span>
+              <span className="text-body-sm text-secondary">cases</span>
             </div>
             <p className="text-body-sm text-secondary">Reviewed & verified</p>
           </div>
@@ -181,8 +188,8 @@ export default function Dashboard() {
                           <td className="py-3 px-space-md">
                             <span className={`${c.priority === 'High' ? 'text-rose-700' : c.priority === 'Medium' ? 'text-amber-700' : 'text-emerald-700'} font-medium text-label-sm`}>{c.priority || 'Medium'}</span>
                           </td>
-                          <td className="py-3 px-space-md text-secondary font-data-mono text-label-sm">{c.waiting}</td>
-                          <td className="py-3 px-space-md text-right"><button className="px-3 py-1 rounded-lg bg-primary text-on-primary hover:bg-primary-container text-label-sm font-medium transition-all" type="button">Review</button></td>
+                          <td className="py-3 px-space-md text-secondary font-data-mono text-label-sm">{formatWaitingTime(c.updatedAt || c.createdAt)}</td>
+                          <td className="py-3 px-space-md text-right"><button onClick={() => window.dispatchEvent(new CustomEvent('cellinsight_navigate', { detail: { view: 'cases', caseObj: c } }))} className="px-3 py-1 rounded-lg bg-primary text-on-primary hover:bg-primary-container text-label-sm font-medium transition-all" type="button">Review</button></td>
                         </tr>
                       ))
                     )}
@@ -191,14 +198,14 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* SECTION B: TODAY'S PATIENTS */}
+            {/* SECTION B: RECENT CASES */}
             <div className="bg-surface-container-lowest border border-surface-container-high rounded-xl overflow-hidden shadow-sm">
               <div className="p-space-md flex flex-col sm:flex-row sm:items-center justify-between gap-space-xs border-b border-surface-container-high">
                 <div className="space-y-0.5">
-                  <h2 className="font-headline-sm text-headline-sm font-semibold text-on-surface">Today's Patients</h2>
+                  <h2 className="font-headline-sm text-headline-sm font-semibold text-on-surface">Recent Cases</h2>
                 </div>
-                <a className="inline-flex items-center gap-1 text-primary hover:text-primary-container font-label-md text-label-md transition-colors font-medium" href="/patients">
-                  <span>View All Patients</span>
+                <a className="inline-flex items-center gap-1 text-primary hover:text-primary-container font-label-md text-label-md transition-colors font-medium" href="#cases">
+                  <span>View All Cases</span>
                   <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                 </a>
               </div>
@@ -216,7 +223,7 @@ export default function Dashboard() {
                   <tbody className="divide-y divide-surface-container-high text-body-sm">
                     {recentPatients.length === 0 ? (
                       <tr>
-                        <td colSpan="5" className="py-4 text-center text-secondary">No patients recorded today.</td>
+                        <td colSpan="5" className="py-4 text-center text-secondary">No cases recorded recently.</td>
                       </tr>
                     ) : (
                       recentPatients.map(c => {
@@ -252,13 +259,9 @@ export default function Dashboard() {
             {/* SECTION C: AI RESULT DISTRIBUTION */}
             <div className="bg-surface-container-lowest border border-surface-container-high rounded-xl p-space-md shadow-sm space-y-space-md">
               <div className="flex items-center justify-between">
-                <div><h2 className="font-headline-sm text-headline-sm font-semibold text-on-surface">AI Result Distribution</h2></div>
+                <div><h2 className="font-headline-sm text-headline-sm font-semibold text-on-surface">Image Quality Distribution</h2></div>
               </div>
-              <div className="flex w-full p-1 rounded-xl bg-surface-container-low">
-                <button className="flex-1 py-1 text-center font-label-sm text-label-sm bg-surface-container-lowest text-primary font-semibold rounded-lg shadow-sm transition-all" type="button">Today</button>
-                <button className="flex-1 py-1 text-center font-label-sm text-label-sm text-secondary hover:text-on-surface rounded-lg transition-all font-medium" type="button">This Week</button>
-                <button className="flex-1 py-1 text-center font-label-sm text-label-sm text-secondary hover:text-on-surface rounded-lg transition-all font-medium" type="button">This Month</button>
-              </div>
+
               <div className="flex flex-col items-center py-space-xs">
                 <div className="relative w-44 h-44">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 160 160">
@@ -277,7 +280,7 @@ export default function Dashboard() {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-[28px] font-bold text-on-surface leading-tight font-data-mono">{aiDist.total}</span>
-                    <span className="text-label-sm text-secondary font-medium">Total Slides</span>
+                    <span className="text-label-sm text-secondary font-medium">Total Images</span>
                   </div>
                 </div>
                 <div className="w-full mt-space-md space-y-space-xs">
@@ -336,8 +339,9 @@ export default function Dashboard() {
                         <span className="font-data-mono text-[11px] text-secondary">{timeString}</span>
                         <p className="text-body-sm text-on-surface">
                           {audit.performedBy ? <span className="font-medium text-primary">{audit.performedBy.name} </span> : ''}
-                          {audit.action.replace(/_/g, ' ').toLowerCase()} 
-                          {audit.targetResource && audit.targetResource.resourceId ? ` on ${audit.targetResource.resourceType}` : ''}
+                          {audit.details ? audit.details : (
+                            <>{audit.action.replace(/_/g, ' ').toLowerCase()} {audit.targetResource && audit.targetResource.resourceId ? ` on ${audit.targetResource.resourceType}` : ''}</>
+                          )}
                         </p>
                       </div>
                     );

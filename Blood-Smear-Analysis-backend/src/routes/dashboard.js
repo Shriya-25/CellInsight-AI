@@ -46,16 +46,19 @@ router.get('/', async (req, res) => {
       return { ...c, finding, confidence, colorType, waiting };
     }));
 
-    // 3. Today's Patients
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const recentPatients = await Case.find({ createdAt: { $gte: startOfToday } })
+    // 3. This Week's Patients
+    const startOfWeek = new Date();
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const recentPatients = await Case.find({ createdAt: { $gte: startOfWeek } })
       .populate('subjectId')
       .sort({ createdAt: -1 })
       .limit(5)
       .lean();
 
     // 4. AI Result Distribution (Today)
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
     const analyses = await Analysis.find({ createdAt: { $gte: startOfToday } });
     let distribution = {
       total: analyses.length,

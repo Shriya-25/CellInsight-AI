@@ -1,21 +1,25 @@
 import express from 'express';
 import Case from '../models/Case.js';
+import Notification from '../models/Notification.js';
+import { generateNextId } from '../utils/generateId.js';
 
 const router = express.Router();
 
 // POST /api/cases - Create a new case
 router.post('/', async (req, res) => {
   try {
-    const { subjectId, caseId, status, assignedTo, notes, test, priority } = req.body;
+    const { subjectId, status, assignedTo, notes, test, priority } = req.body;
     
     // Basic validation
     if (!subjectId) {
       return res.status(400).json({ error: 'subjectId is required.' });
     }
 
+    const generatedCaseId = await generateNextId('caseId', 'S-');
+
     const newCase = new Case({
       subjectId,
-      caseId,
+      caseId: generatedCaseId,
       status: status || 'draft',
       assignedTo,
       notes,
@@ -283,6 +287,18 @@ router.post('/:id/analyze', async (req, res) => {
       
     // Update case status at the end regardless if some images failed
     await Case.findByIdAndUpdate(id, { status: 'review_required' });
+
+    // Create a notification
+    const notificationMsg = analysisResults.length > 0 
+      ? `AI Analysis Complete for Case. Cells flagged for review.`
+      : `AI Analysis Complete for Case. No manual review needed.`;
+      
+    await Notification.create({
+      userId: req.user ? req.user.id : null,
+      message: notificationMsg,
+      type: 'success',
+      link: 'cases'
+    });
 
     return res.status(200).json({ message: 'Analysis complete', results: analysisResults });
 

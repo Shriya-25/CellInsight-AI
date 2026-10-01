@@ -2,6 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+const formatConfidence = (val) => {
+  if (val === undefined || val === null) return null;
+  return Math.round(val * (val <= 1 ? 100 : 1));
+};
+
 const CustomSelect = ({ value, onChange, options }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -375,19 +380,19 @@ const CaseDetails = ({ caseData, onBack }) => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-slate-400">Age / Gender</span>
-                <span className="font-medium text-slate-700">32 yrs / Male</span>
+                <span className="font-medium text-slate-700">{caseData.patientAge} yrs / {caseData.patientGender}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-slate-400">Blood Group</span>
-                <span className="px-1.5 py-0.5 text-[11px] font-semibold text-slate-700 bg-slate-100 rounded">B+</span>
+                <span className="px-1.5 py-0.5 text-[11px] font-semibold text-slate-700 bg-slate-100 rounded">{caseData.patientBlood}</span>
               </div>
             </div>
           </div>
           <div className="xl:col-span-4 flex flex-col justify-between h-full space-y-2 text-xs">
             <div className="space-y-1.5">
-              <div className="flex items-start gap-2"><span className="text-slate-400 shrink-0">Contact</span><span className="font-medium text-slate-700">+91 98765 43210</span></div>
-              <div className="flex items-start gap-2"><span className="text-slate-400 shrink-0">Address</span><span className="font-medium text-slate-700">Pune, Maharashtra</span></div>
-              <div className="flex items-start gap-2"><span className="text-slate-400 shrink-0">Clinical Notes</span><span className="font-medium text-slate-700">Routine hematology evaluation.</span></div>
+              <div className="flex items-start gap-2"><span className="text-slate-400 shrink-0">Contact</span><span className="font-medium text-slate-700">{caseData.patientContact}</span></div>
+              <div className="flex items-start gap-2"><span className="text-slate-400 shrink-0">Address</span><span className="font-medium text-slate-700">{caseData.patientAddress}</span></div>
+              <div className="flex items-start gap-2"><span className="text-slate-400 shrink-0">Clinical Notes</span><span className="font-medium text-slate-700">{caseData.patientNotes}</span></div>
             </div>
           </div>
         </div>
@@ -403,15 +408,15 @@ const CaseDetails = ({ caseData, onBack }) => {
         </div>
         <div className="relative flex items-center justify-between max-w-4xl mx-auto px-4">
           <div className="absolute left-10 right-10 top-3 h-[2px] -translate-y-1/2 bg-slate-200 z-0">
-            <div className="h-full bg-emerald-500 w-[60%]"></div>
+            <div className={`h-full bg-emerald-500 transition-all duration-500 ${caseData.status === 'draft' ? 'w-[20%]' : caseData.status === 'processing' ? 'w-[40%]' : ['review_required', 'review_pending', 'Review Required'].includes(caseData.status) ? 'w-[60%]' : ['verified', 'completed', 'Verified'].includes(caseData.status) ? 'w-[80%]' : 'w-[100%]'}`}></div>
           </div>
           {[
-            { label: 'Image Upload', sub: '5 images', done: true },
-            { label: 'Quality Check', sub: 'Good quality', done: true },
-            { label: 'AI Analysis', sub: `${caseData.date}`, done: true },
-            { label: 'Expert Review', sub: null, active: true },
-            { label: 'Verification', sub: 'Pending', done: false },
-            { label: 'Report', sub: 'Not Generated', done: false },
+            { label: 'Image Upload', sub: `${images.length} images`, done: true },
+            { label: 'Quality Check', sub: caseData.status !== 'draft' ? 'Completed' : 'Pending', done: caseData.status !== 'draft', active: caseData.status === 'draft' },
+            { label: 'AI Analysis', sub: caseData.status !== 'draft' ? caseData.date : 'Pending', done: !['draft', 'processing', 'AI Processing'].includes(caseData.status), active: ['processing', 'AI Processing'].includes(caseData.status) },
+            { label: 'Expert Review', sub: null, done: ['verified', 'completed', 'approved', 'Verified'].includes(caseData.status), active: ['review_required', 'review_pending', 'Review Required'].includes(caseData.status) },
+            { label: 'Verification', sub: ['verified', 'completed', 'approved', 'Verified'].includes(caseData.status) ? 'Verified' : 'Pending', done: ['verified', 'completed', 'approved', 'Verified'].includes(caseData.status) },
+            { label: 'Report', sub: caseData.status === 'approved' ? 'Generated' : 'Not Generated', done: caseData.status === 'approved' },
           ].map((step, i) => (
             <div key={i} className="relative z-10 flex flex-col items-center text-center">
               {step.done ? (
@@ -554,11 +559,11 @@ const CaseDetails = ({ caseData, onBack }) => {
             <div className="pt-2 border-t border-slate-100">
               <span className="text-xs text-slate-500 font-medium">Confidence Score</span>
               <div className="text-base font-bold text-slate-900 my-1.5">
-                {analyses.length > 0 && analyses[0].confidence !== undefined ? `${(analyses[0].confidence * (analyses[0].confidence <= 1 ? 100 : 1)).toFixed(1)}%` : 'Processing...'}
+                {analyses.length > 0 && analyses[0].confidence !== undefined ? `${formatConfidence(analyses[0].confidence)}%` : 'Processing...'}
               </div>
               {analyses.length > 0 && analyses[0].confidence !== undefined && (
                 <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-teal-600 rounded-full" style={{width:`${analyses[0].confidence * (analyses[0].confidence <= 1 ? 100 : 1)}%`}}></div>
+                  <div className="h-full bg-teal-600 rounded-full" style={{width:`${formatConfidence(analyses[0].confidence)}%`}}></div>
                 </div>
               )}
             </div>
@@ -831,8 +836,7 @@ export default function Cases({ initialCase, newCasePatientId }) {
   const modalFileInputRef = useRef(null);
 
   const handleOpenModal = () => {
-    const nextIdNum = cases.length > 0 ? Math.max(...cases.map(c => parseInt(c.id.replace(/[^0-9]/g, '')) || 0)) + 1 : 100;
-    setModalSampleId(`S-${nextIdNum}`);
+    setModalSampleId('Auto-generated');
     if (patients.length > 0) setModalPatient(patients[0].value);
     setModalTestType('Blood Smear (Peripheral)');
     setModalPriority('Medium');
@@ -868,10 +872,16 @@ export default function Cases({ initialCase, newCasePatientId }) {
           id: c.caseId || c._id.slice(-6).toUpperCase(),
           patient: c.subjectId?.name || 'Unknown',
           patientId: c.subjectId?.patientIdentifier || '-',
+          patientAge: c.subjectId?.demographics?.age || '-',
+          patientGender: c.subjectId?.demographics?.gender || '-',
+          patientBlood: c.subjectId?.demographics?.blood || '-',
+          patientContact: c.subjectId?.contact || '-',
+          patientAddress: c.subjectId?.address || '-',
+          patientNotes: c.notes || '-',
           test: c.test || 'Blood Smear',
           date: new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           finding: c.finding || '-',
-          confidence: c.confidence,
+          confidence: formatConfidence(c.confidence),
           status: c.status === 'draft' ? 'AI Processing' : (['review_required', 'review_pending'].includes(c.status) ? 'Review Required' : (['verified', 'completed', 'approved'].includes(c.status) ? 'Verified' : 'AI Processing')),
           priority: c.priority || 'Medium',
           colorType: c.colorType || 'neutral'
@@ -900,8 +910,7 @@ export default function Cases({ initialCase, newCasePatientId }) {
 
   useEffect(() => {
     if (newCasePatientId && !loading && patients.length > 0) {
-      const nextIdNum = cases.length > 0 ? Math.max(...cases.map(c => parseInt(c.id.replace(/[^0-9]/g, '')) || 0)) + 1 : 100;
-      setModalSampleId(`S-${nextIdNum}`);
+      setModalSampleId('Auto-generated');
       setModalPatient(newCasePatientId);
       setModalTestType('Blood Smear (Peripheral)');
       setModalPriority('Medium');

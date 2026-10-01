@@ -225,7 +225,7 @@ const PatientProfile = ({ patient, onBack, onUpdatePatient, onOpenCase }) => {
             </div>
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-700 text-xs flex items-start gap-2.5">
               <span className="material-symbols-outlined text-[16px] text-teal-600 shrink-0 mt-0.5">info</span>
-              <p className="leading-relaxed">Routine hematology evaluation. Patient referred for automated smear screening following mild constitutional fatigue.</p>
+              <p className="leading-relaxed">{patient.notes || "No clinical notes recorded for this patient."}</p>
             </div>
           </div>
         </div>
@@ -296,7 +296,7 @@ const PatientProfile = ({ patient, onBack, onUpdatePatient, onOpenCase }) => {
             <p className="text-xs text-slate-500 mt-0.5">Chronological archive of patient laboratory cases and verification outcomes</p>
           </div>
           <div className="flex items-center gap-2 font-mono text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg self-start sm:self-auto">
-            <span>3 Recorded Accessions</span>
+            <span>{patient.rawCases?.length || 0} Recorded Accessions</span>
           </div>
         </div>
         {/* Historical Table Container */}
@@ -313,48 +313,43 @@ const PatientProfile = ({ patient, onBack, onUpdatePatient, onOpenCase }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-              {[
-                { date: '06 Sep 2026', id: 'CS-1024', test: 'Blood Smear', finding: 'Abnormal cell pattern', status: 'Review Required', active: true, caseObj: { id: 'CS-1024', patient: patient.name, patientId: patient.id, test: 'CBC + Blood Smear', date: '06 Sep 2026', finding: 'Abnormal cell pattern', confidence: 94.6, status: 'Review Required', priority: 'High', colorType: 'error' } },
-                { date: '02 Aug 2026', id: 'CS-0945', test: 'Blood Smear', finding: 'Mild anisocytosis', status: 'Reviewed', active: false },
-                { date: '10 Jul 2026', id: 'CS-0891', test: 'CBC', finding: 'No significant abnormality', status: 'Verified', active: false },
-              ].map((row) => (
-                <tr key={row.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">{row.date}</td>
-                  <td className={`py-3.5 px-4 font-mono font-semibold whitespace-nowrap ${row.active ? 'text-teal-700' : 'text-slate-900'}`}>{row.id}</td>
-                  <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700">{row.test}</td>
-                  <td className="py-3.5 px-4 text-slate-600">{row.finding}</td>
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    {row.active ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200/60">
-                        <span className="material-symbols-outlined text-[12px]">schedule</span>
-                        <span>{row.status}</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                        <span className="material-symbols-outlined text-[12px]">{row.status === 'Verified' ? 'verified' : 'done_all'}</span>
-                        <span>{row.status}</span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                    {row.active ? (
-                      <button
-                        onClick={() => onOpenCase && onOpenCase(row.caseObj)}
-                        className="inline-flex items-center gap-1 text-teal-600 font-semibold hover:underline text-xs"
-                        type="button"
-                      >
-                        <span>View Case</span>
-                        <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                      </button>
-                    ) : (
-                      <button className="inline-flex items-center gap-1 text-slate-500 hover:text-teal-600 font-semibold transition-colors text-xs" type="button">
-                        <span>View Report</span>
-                        <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                      </button>
-                    )}
-                  </td>
+              {patient.rawCases && patient.rawCases.length > 0 ? (
+                patient.rawCases.map((c) => (
+                  <tr key={c._id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">{new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                    <td className="py-3.5 px-4 font-mono font-semibold whitespace-nowrap text-teal-700">{c.caseId || (c._id && c._id.slice(-6).toUpperCase())}</td>
+                    <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700">{c.test || 'Blood Smear'}</td>
+                    <td className="py-3.5 px-4 text-slate-600">{c.notes || '-'}</td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      {c.status === 'review_required' || c.status === 'draft' || c.status === 'processing' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200/60">
+                          <span className="material-symbols-outlined text-[12px]">schedule</span>
+                          <span>{c.status || 'Pending'}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                          <span className="material-symbols-outlined text-[12px]">done_all</span>
+                          <span>{c.status}</span>
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => onOpenCase && onOpenCase(c)}
+                          className="inline-flex items-center gap-1 text-teal-600 font-semibold hover:underline text-xs"
+                          type="button"
+                        >
+                          <span>View Case</span>
+                          <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                        </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="py-8 text-center text-slate-500 text-xs">No cases found for this patient.</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
@@ -591,8 +586,7 @@ export default function Patients() {
   const formRef = useRef(null);
 
   const handleOpenModal = () => {
-    const nextIdNum = patients.length > 0 ? Math.max(...patients.map(p => parseInt(p.id.replace(/[^0-9]/g, '')) || 0)) + 1 : 100;
-    setModalPatientId(`P-${nextIdNum}`);
+    setModalPatientId('Auto-generated');
     if (formRef.current) formRef.current.reset();
     setFormGender('');
     setFormBloodGroup('');
@@ -630,7 +624,9 @@ export default function Patients() {
         casesCount: d.cases ? d.cases.length : 0,
         casesText: d.cases ? `${d.cases.length} Cases` : '0 Cases',
         rawCases: d.cases || [],
+        hasOngoingCases: d.cases ? d.cases.some(c => !['verified', 'completed', 'approved'].includes(c.status)) : false,
         active: d.active,
+        createdAt: d.createdAt,
         date: new Date(d.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
       }));
       setPatients(formatted);
@@ -803,7 +799,7 @@ export default function Patients() {
       </div>
 
       {/* 2. Summary Metric Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Patients</div>
@@ -818,7 +814,7 @@ export default function Patients() {
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Active Patients</div>
-            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">{patients.filter(p => p.active).length}</div>
+            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">{patients.filter(p => p.hasOngoingCases).length}</div>
             <div className="text-[11px] text-teal-600 mt-1 font-medium flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
               Patients with active cases
@@ -831,23 +827,12 @@ export default function Patients() {
 
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Registered Today</div>
-            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">{patients.filter(p => p.date === new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })).length}</div>
-            <div className="text-[11px] text-slate-400 mt-1 font-medium">New patient records today</div>
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Registered This Week</div>
+            <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">{patients.filter(p => p.createdAt && new Date(p.createdAt) >= new Date(new Date().setDate(new Date().getDate() - 7))).length}</div>
+            <div className="text-[11px] text-slate-400 mt-1 font-medium">New patient records this week</div>
           </div>
           <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 border border-sky-100 shadow-sm">
             <svg className="w-4 h-4 text-sky-600" fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect height="18" rx="2" width="18" x="3" y="4"></rect><path d="M3 10h18"></path><path d="M10 14h4"></path><path d="M12 12v4"></path></svg>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
-          <div>
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Pending Cases</div>
-            <div className="text-2xl font-bold text-amber-600 mt-1 tracking-tight">{patients.filter(p => p.cases !== '0 Cases').length}</div>
-            <div className="text-[11px] text-amber-600/80 mt-1 font-medium">Cases awaiting review</div>
-          </div>
-          <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100 shadow-sm">
-            <svg className="w-4 h-4 text-amber-600" fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect height="4" rx="1" width="8" x="8" y="2"></rect><path d="M12 11v4"></path><path d="M12 15h2"></path></svg>
           </div>
         </div>
       </div>
@@ -989,18 +974,7 @@ export default function Patients() {
                           <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10px] font-semibold px-1.5 py-0.5 rounded">Active</span>
                         )}
                       </div>
-                      {patient.rawCases && patient.rawCases.length > 0 && (
-                        <div className="flex flex-wrap gap-1 max-w-[120px]">
-                          {patient.rawCases.slice(0, 3).map(c => (
-                            <span key={c._id} className="text-[9px] font-mono bg-slate-100 text-slate-500 px-1 py-0.5 rounded border border-slate-200" title={`Created: ${new Date(c.createdAt).toLocaleDateString()}`}>
-                              {c.caseId || (c._id && c._id.slice(-6).toUpperCase())}
-                            </span>
-                          ))}
-                          {patient.rawCases.length > 3 && (
-                            <span className="text-[9px] text-slate-400 self-center">+{patient.rawCases.length - 3}</span>
-                          )}
-                        </div>
-                      )}
+
                     </div>
                   </td>
                   <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">{patient.date}</td>

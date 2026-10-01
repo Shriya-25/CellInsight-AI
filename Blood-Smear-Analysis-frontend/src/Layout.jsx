@@ -3,6 +3,48 @@ import logoImg from './assets/logo.png';
 
 export default function Layout({ children, currentView, onNavigate, user, onLogout }) {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [notifications, setNotifications] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/notifications`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const markNotificationsRead = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      await fetch(`${API_URL}/api/notifications/read`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchNotifications();
+    } catch (e) { console.error(e); }
+  };
+
+  const toggleNotifications = () => {
+    if (!showDropdown) {
+      markNotificationsRead();
+    }
+    setShowDropdown(!showDropdown);
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const notifTimer = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(notifTimer);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -144,11 +186,40 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
               />
             </div>
           </div>
-          <div className="flex items-center gap-space-md">
-            <button className="relative p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-full transition-colors" type="button">
+          <div className="flex items-center gap-space-md relative">
+            <button 
+              className="relative p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-full transition-colors" 
+              type="button"
+              onClick={toggleNotifications}
+            >
               <span className="material-symbols-outlined text-[20px]">notifications</span>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+              {notifications.some(n => !n.isRead) && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+              )}
             </button>
+            
+            {showDropdown && (
+              <div className="absolute top-10 right-32 w-80 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-50">
+                <div className="p-3 border-b border-slate-100 bg-slate-50 font-bold text-sm text-slate-800 flex justify-between items-center">
+                  <span>Notifications</span>
+                  <button onClick={() => setShowDropdown(false)} className="text-slate-400 hover:text-slate-600">
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </button>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.length > 0 ? (
+                    notifications.map(n => (
+                      <div key={n._id} className={`p-3 border-b border-slate-100 hover:bg-slate-50 transition-colors ${!n.isRead ? 'bg-slate-50/50' : ''}`}>
+                        <div className="text-xs text-slate-800">{n.message}</div>
+                        <div className="text-[10px] text-slate-400 mt-1">{new Date(n.createdAt).toLocaleTimeString()}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-xs text-slate-500 text-center">No notifications yet.</div>
+                  )}
+                </div>
+              </div>
+            )}
             <span className="text-body-sm text-secondary font-medium">{formattedTime}</span>
           </div>
         </header>

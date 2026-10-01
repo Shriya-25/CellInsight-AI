@@ -1,5 +1,7 @@
 import express from 'express';
 import CaseSubject from '../models/CaseSubject.js';
+import AuditEvent from '../models/AuditEvent.js';
+import { generateNextId } from '../utils/generateId.js';
 
 const router = express.Router();
 
@@ -27,11 +29,13 @@ router.get('/', async (req, res) => {
 // POST /api/subjects - Create a new patient
 router.post('/', async (req, res) => {
   try {
-    const { patientIdentifier, name, contact, address, active, demographics } = req.body;
+    const { name, contact, address, active, demographics } = req.body;
     
-    if (!patientIdentifier || !name || !contact) {
-      return res.status(400).json({ error: 'patientIdentifier, name, and contact are required.' });
+    if (!name || !contact) {
+      return res.status(400).json({ error: 'name and contact are required.' });
     }
+
+    const patientIdentifier = await generateNextId('patientId', 'P-');
 
     const newSubject = new CaseSubject({
       patientIdentifier,
@@ -43,6 +47,17 @@ router.post('/', async (req, res) => {
     });
 
     const savedSubject = await newSubject.save();
+    
+    await AuditEvent.create({
+      action: 'PATIENT_REGISTERED',
+      performedBy: req.user ? req.user.id : null,
+      targetResource: {
+        resourceType: 'Patient',
+        resourceId: savedSubject._id
+      },
+      details: `Registered new patient: ${savedSubject.name} (${savedSubject.patientIdentifier})`
+    });
+
     return res.status(201).json(savedSubject);
   } catch (error) {
     console.error('Error creating subject:', error);

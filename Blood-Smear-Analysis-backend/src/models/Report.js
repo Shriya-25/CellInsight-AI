@@ -2,6 +2,10 @@ import mongoose from 'mongoose';
 
 const reportSchema = new mongoose.Schema(
   {
+    reportId: {
+      type: String,
+      unique: true,
+    },
     caseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Case',

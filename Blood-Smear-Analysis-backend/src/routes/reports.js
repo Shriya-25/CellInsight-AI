@@ -5,6 +5,7 @@ import AuditEvent from '../models/AuditEvent.js';
 import ImageModel from '../models/Image.js';
 import Analysis from '../models/Analysis.js';
 import Cell from '../models/Cell.js';
+import { generateNextId } from '../utils/generateId.js';
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ router.get('/', async (req, res) => {
       if (!caseDoc) {
         return {
           _id: r._id,
-          id: `R-${r._id.toString().slice(-6).toUpperCase()}`,
+          id: r.reportId || `R-${r._id.toString().slice(-6).toUpperCase()}`,
           caseId: 'Unknown',
           patient: 'Unknown',
           patientId: 'Unknown',
@@ -108,7 +109,7 @@ router.get('/', async (req, res) => {
       
       return {
         _id: r._id,
-        id: `R-${r._id.toString().slice(-6).toUpperCase()}`,
+        id: r.reportId || `R-${r._id.toString().slice(-6).toUpperCase()}`,
         caseId: caseDoc.caseId || caseDoc._id?.toString().slice(-6).toUpperCase(),
         patient: subject.name || 'Unknown',
         patientId: subject.patientIdentifier || 'Unknown',
@@ -147,7 +148,10 @@ router.post('/', async (req, res) => {
   try {
     const { caseId, generatedBy, content } = req.body;
 
+    const reportId = await generateNextId('reportId', 'R-');
+
     const report = new Report({
+      reportId,
       caseId,
       generatedBy,
       content: content || 'Generated PDF Report placeholder'
