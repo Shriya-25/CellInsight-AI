@@ -13,7 +13,7 @@ const caseSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'processing', 'review_required', 'completed', 'approved'],
+      enum: ['draft', 'review_required', 'verified'],
       default: 'draft',
       required: true,
     },

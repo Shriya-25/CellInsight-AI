@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
     // 1. Metrics
     const pendingReviewCount = await Case.countDocuments({ status: 'review_required' });
     const aiProcessingCount = await Case.countDocuments({ status: 'draft' });
-    const reviewedCount = await Case.countDocuments({ status: { $in: ['completed', 'approved'] } });
+    const reviewedCount = await Case.countDocuments({ status: 'verified' });
     const reportsCount = await Report.countDocuments();
 
     // 2. Cases Requiring Attention (Top 5 review_required cases)

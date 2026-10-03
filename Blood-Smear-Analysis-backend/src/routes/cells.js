@@ -33,6 +33,30 @@ router.patch('/:id/review', async (req, res) => {
       
       const analysis = await Analysis.findById(updatedCell.analysisId);
       const caseId = analysis ? analysis.caseId : null;
+      
+      if (caseId) {
+        const Report = (await import('../models/Report.js')).default;
+        await Report.updateMany({ caseId, status: 'CURRENT' }, { $set: { status: 'OUTDATED' } });
+        
+        // Also check if this was the last pending cell
+        const Case = (await import('../models/Case.js')).default;
+        const ImageModel = (await import('../models/Image.js')).default;
+        
+        const allImages = await ImageModel.find({ caseId });
+        const imageIds = allImages.map(img => img._id);
+        const allAnalyses = await Analysis.find({ imageId: { $in: imageIds } });
+        const analysisIds = allAnalyses.map(a => a._id);
+        
+        const remainingPending = await Cell.countDocuments({
+          analysisId: { $in: analysisIds },
+          reviewPriority: { $gt: 0.3 },
+          reviewStatus: 'pending'
+        });
+        
+        if (remainingPending === 0) {
+          await Case.findByIdAndUpdate(caseId, { status: 'verified' });
+        }
+      }
 
       await AuditEvent.create({
         action: 'CELL_REVIEWED',

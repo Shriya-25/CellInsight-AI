@@ -2,6 +2,7 @@ import express from 'express';
 import Case from '../models/Case.js';
 import Notification from '../models/Notification.js';
 import { generateNextId } from '../utils/generateId.js';
+import Report from '../models/Report.js';
 
 const router = express.Router();
 
@@ -46,7 +47,7 @@ router.get('/', async (req, res) => {
       let confidence = null;
       let colorType = 'processing';
 
-      if (['review_required', 'review_pending', 'completed', 'approved', 'verified'].includes(c.status)) {
+      if (['review_required', 'verified'].includes(c.status)) {
         const images = await ImageModel.find({ caseId: c._id });
         if (images.length > 0) {
           const imageIds = images.map(img => img._id);
@@ -57,7 +58,7 @@ router.get('/', async (req, res) => {
             colorType = confidence && confidence < 80 ? 'warning' : 'success';
           }
         }
-      } else if (c.status === 'draft' || c.status === 'processing') {
+      } else if (c.status === 'draft') {
          finding = 'Processing pending...';
          colorType = 'neutral';
       }
@@ -86,6 +87,41 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error fetching case:', error);
     return res.status(500).json({ error: 'Failed to fetch case.' });
+  }
+});
+
+// PATCH /api/cases/:id - Update case details (e.g., status)
+router.patch('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    const updatedCase = await Case.findByIdAndUpdate(id, { $set: updateData }, { new: true });
+    
+    if (!updatedCase) {
+      return res.status(404).json({ error: 'Case not found.' });
+    }
+    
+    // If fast-approving to 'verified', accept all pending cells
+    if (updateData.status === 'verified') {
+      const allImages = await ImageModel.find({ caseId: id });
+      const imageIds = allImages.map(img => img._id);
+      const allAnalyses = await Analysis.find({ imageId: { $in: imageIds } });
+      const analysisIds = allAnalyses.map(a => a._id);
+      
+      await Cell.updateMany(
+        { analysisId: { $in: analysisIds }, reviewStatus: 'pending' },
+        { $set: { reviewStatus: 'accepted' } }
+      );
+      
+      // Invalidate existing reports just in case
+      await Report.updateMany({ caseId: id, status: 'CURRENT' }, { $set: { status: 'OUTDATED' } });
+    }
+    
+    return res.json(updatedCase);
+  } catch (error) {
+    console.error('Error updating case:', error);
+    return res.status(500).json({ error: 'Failed to update case.' });
   }
 });
 
@@ -297,11 +333,25 @@ router.post('/:id/analyze', async (req, res) => {
       });
     }
       
+    // Determine the case status based on whether there are pending flagged cells
+    const allImages = await ImageModel.find({ caseId: id });
+    const imageIds = allImages.map(img => img._id);
+    const allAnalyses = await Analysis.find({ imageId: { $in: imageIds } });
+    const analysisIds = allAnalyses.map(a => a._id);
+    const allCells = await Cell.find({ analysisId: { $in: analysisIds } });
+    
+    // Check if any cell requires review and hasn't been reviewed yet
+    const needsReview = allCells.some(c => c.reviewPriority > 0.3 && c.reviewStatus === 'pending');
+    const newStatus = needsReview ? 'review_required' : 'verified';
+    
     // Update case status at the end regardless if some images failed
-    await Case.findByIdAndUpdate(id, { status: 'review_required' });
+    await Case.findByIdAndUpdate(id, { status: newStatus });
+
+    // Invalidate any existing reports since new analysis data is available
+    await Report.updateMany({ caseId: id, status: 'CURRENT' }, { $set: { status: 'OUTDATED' } });
 
     // Create a notification
-    const notificationMsg = analysisResults.length > 0 
+    const notificationMsg = needsReview 
       ? `AI Analysis Complete for Case. Cells flagged for review.`
       : `AI Analysis Complete for Case. No manual review needed.`;
       

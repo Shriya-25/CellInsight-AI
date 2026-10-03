@@ -30,8 +30,8 @@ router.get('/', async (req, res) => {
           patient: 'Unknown',
           patientId: 'Unknown',
           test: 'Blood Smear',
-          status: 'Approved',
-          version: 'v1',
+          status: r.status || 'CURRENT',
+          version: r.version ? `v${r.version}` : 'v1',
           date: new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
         };
       }
@@ -74,7 +74,11 @@ router.get('/', async (req, res) => {
       if (caseDoc.notes) comments.push(caseDoc.notes);
 
       cells.forEach(c => {
-        if (c.reviewStatus && reviewSummary[c.reviewStatus] !== undefined) {
+        if (c.reviewStatus === 'pending') {
+          if (c.reviewPriority > 0.3) {
+            reviewSummary.pending++;
+          }
+        } else if (c.reviewStatus && reviewSummary[c.reviewStatus] !== undefined) {
           reviewSummary[c.reviewStatus]++;
         } else if (c.reviewStatus) {
           reviewSummary.unknown++;
@@ -116,8 +120,8 @@ router.get('/', async (req, res) => {
         patientAge: subject.age || 'Unknown',
         patientGender: subject.gender || 'Unknown',
         test: caseDoc.test || 'Peripheral Blood Smear',
-        status: 'Approved',
-        version: 'v1',
+        status: r.status || 'CURRENT',
+        version: r.version ? `v${r.version}` : 'v1',
         date: new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         collectionDate: new Date(caseDoc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         
@@ -148,19 +152,26 @@ router.post('/', async (req, res) => {
   try {
     const { caseId, generatedBy, content } = req.body;
 
+    // Handle versioning
+    const existingReports = await Report.find({ caseId }).sort({ version: -1 });
+    let nextVersion = 1;
+    if (existingReports.length > 0) {
+      nextVersion = (existingReports[0].version || 1) + 1;
+      await Report.updateMany({ caseId, status: 'CURRENT' }, { $set: { status: 'OUTDATED' } });
+    }
+
     const reportId = await generateNextId('reportId', 'R-');
 
     const report = new Report({
       reportId,
       caseId,
       generatedBy,
-      content: content || 'Generated PDF Report placeholder'
+      content: content || 'Generated PDF Report placeholder',
+      version: nextVersion,
+      status: 'CURRENT'
     });
 
     const savedReport = await report.save();
-
-    // Update case status
-    await Case.findByIdAndUpdate(caseId, { status: 'approved' });
 
     // Log audit event
     await AuditEvent.create({

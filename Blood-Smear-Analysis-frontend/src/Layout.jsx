@@ -61,7 +61,7 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
 
   return (
     <div className="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen">
-      <aside className="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+      <aside className="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)] print:hidden">
         <div className="flex flex-col flex-1 overflow-y-auto">
           <div className="h-16 px-gutter-lg flex items-center gap-space-md">
             <img 
@@ -174,8 +174,8 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
         </div>
       </aside>
       
-      <div className="pl-72">
-        <header className="fixed top-0 left-72 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-gutter-lg">
+      <div className="pl-72 print:pl-0 print:bg-white">
+        <header className="fixed top-0 left-72 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-gutter-lg print:hidden">
           <div className="flex items-center gap-space-lg">
             <div className="relative flex items-center w-80">
               <span className="material-symbols-outlined absolute left-space-md text-outline text-[18px]">search</span>
@@ -224,7 +224,7 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
           </div>
         </header>
         
-        <main className="w-full pt-16 bg-surface min-h-screen px-gutter-lg py-gutter-lg">
+        <main className="w-full pt-16 bg-surface min-h-screen px-gutter-lg py-gutter-lg print:p-0 print:min-h-0 print:bg-white">
           {children}
         </main>
       </div>

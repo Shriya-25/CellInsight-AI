@@ -106,6 +106,7 @@ const CaseDetails = ({ caseData, onBack }) => {
   const [reviewForm, setReviewForm] = useState({ reviewStatus: 'accepted', finalLabel: '', comment: '' });
   const [isReviewing, setIsReviewing] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [showReportSuccessModal, setShowReportSuccessModal] = useState(false);
 
   const [images, setImages] = useState([]);
   const [cells, setCells] = useState([]);
@@ -148,21 +149,6 @@ const CaseDetails = ({ caseData, onBack }) => {
   useEffect(() => {
     fetchCaseData();
   }, [caseData._id, token]);
-
-  // Silently complete case if no review is required
-  useEffect(() => {
-    const isAnalyzed = analyses.length > 0 && analyses[0].results;
-    if (isAnalyzed && cells.length > 0 && caseData.status === 'review_required') {
-      const flaggedCells = cells.filter(c => c.reviewPriority > 0.3);
-      if (flaggedCells.length === 0) {
-        fetch(`${API_URL}/api/cases/${caseData._id}`, {
-          method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'completed' })
-        }).catch(err => console.error("Silent complete failed:", err));
-      }
-    }
-  }, [analyses, cells, caseData.status, caseData._id, token]);
 
   const handleUploadImage = async (e) => {
     const selectedFile = e.target.files[0];
@@ -222,14 +208,10 @@ const CaseDetails = ({ caseData, onBack }) => {
       });
       if (res.ok) {
         const rawData = await res.json();
-        const data = rawData.filter(c => c.reviewPriority > 0.3); // Only review low confidence cells
+        const data = rawData.filter(c => c.reviewPriority > 0.3 && c.reviewStatus === 'pending'); // Only review low confidence cells that are still pending
         
         if (data.length === 0) {
-           await fetch(`${API_URL}/api/cases/${caseData._id}`, {
-             method: 'PATCH',
-             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-             body: JSON.stringify({ status: 'completed' })
-           });
+           alert("No cells require review.");
            window.location.reload();
            return;
         }
@@ -257,7 +239,7 @@ const CaseDetails = ({ caseData, onBack }) => {
       await fetch(`${API_URL}/api/cases/${caseData._id}`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'completed' })
+        body: JSON.stringify({ status: 'verified' })
       });
       alert("Case approved successfully.");
       window.location.reload();
@@ -287,12 +269,7 @@ const CaseDetails = ({ caseData, onBack }) => {
             comment: nextCell.comment || '' 
           });
         } else {
-          // Last cell, complete the case
-          await fetch(`${API_URL}/api/cases/${caseData._id}`, {
-            method: 'PATCH',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'completed' })
-          });
+          // Last cell, complete the case (Backend handles case status update)
           setIsReviewModalOpen(false);
           alert("Case review completed.");
           window.location.reload(); // Quick way to refresh
@@ -318,8 +295,8 @@ const CaseDetails = ({ caseData, onBack }) => {
         body: JSON.stringify({ caseId: caseData._id, generatedBy })
       });
       if (res.ok) {
-        alert("Report generated successfully!");
-        window.location.reload();
+        fetchCaseData(); // Refetch to update reports state
+        setShowReportSuccessModal(true);
       } else {
         alert("Failed to generate report.");
       }
@@ -330,7 +307,7 @@ const CaseDetails = ({ caseData, onBack }) => {
     }
   };
 
-  const flaggedCells = cells.filter(c => c.reviewPriority > 0.3);
+  const flaggedCells = cells.filter(c => c.reviewPriority > 0.3 && c.reviewStatus === 'pending');
   const hasReviewFlags = flaggedCells.length > 0;
   const isAnalyzed = analyses.length > 0 && analyses[0].results;
 
@@ -372,7 +349,7 @@ const CaseDetails = ({ caseData, onBack }) => {
     });
 
     // 4. Expert Review Completed
-    if (['completed', 'verified', 'approved', 'Verified'].includes(caseData.status) && caseData.updatedAt && caseData.updatedAt !== caseData.createdAt) {
+    if (caseData.status === 'verified' && caseData.updatedAt && caseData.updatedAt !== caseData.createdAt) {
         activities.push({
           color: 'bg-emerald-600',
           time: new Date(caseData.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
@@ -427,13 +404,30 @@ const CaseDetails = ({ caseData, onBack }) => {
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             Delete
           </button>
-          <button className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition shadow-sm">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-            </svg>
-            Generate Report
-          </button>
+          {reports.length > 0 && reports[0].status === 'CURRENT' ? (
+            <button 
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition shadow-sm"
+              onClick={() => window.dispatchEvent(new CustomEvent('cellinsight_navigate', { detail: { view: 'reports' } }))}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              View Report
+            </button>
+          ) : (
+            <button 
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-white rounded-lg transition shadow-sm ${!isAnalyzed ? 'bg-slate-300 cursor-not-allowed' : 'bg-teal-700 hover:bg-teal-800'}`}
+              onClick={handleGenerateReport}
+              disabled={!isAnalyzed || isGeneratingReport}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              {isGeneratingReport ? 'Generating...' : (reports.length > 0 ? 'Update Report' : 'Generate Report')}
+            </button>
+          )}
         </div>
       </section>
 
@@ -444,8 +438,11 @@ const CaseDetails = ({ caseData, onBack }) => {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xl font-bold text-slate-900">{caseData.id}</span>
-                {caseData.status === 'Review Required' && (
+                {caseData.status === 'review_required' && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-200/60">Review Required</span>
+                )}
+                {caseData.status === 'verified' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200/60">Verified</span>
                 )}
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
                   caseData.priority === 'High' ? 'bg-rose-50 text-rose-600 border-rose-200/60' :
@@ -508,15 +505,15 @@ const CaseDetails = ({ caseData, onBack }) => {
         </div>
         <div className="relative flex items-center justify-between max-w-4xl mx-auto px-4">
           <div className="absolute left-10 right-10 top-3 h-[2px] -translate-y-1/2 bg-slate-200 z-0">
-            <div className={`h-full bg-emerald-500 transition-all duration-500 ${caseData.status === 'draft' ? 'w-[20%]' : caseData.status === 'processing' ? 'w-[40%]' : ['review_required', 'review_pending', 'Review Required'].includes(caseData.status) ? 'w-[60%]' : ['verified', 'completed', 'Verified'].includes(caseData.status) ? 'w-[80%]' : 'w-[100%]'}`}></div>
+            <div className={`h-full bg-emerald-500 transition-all duration-500 ${caseData.status === 'draft' ? 'w-[20%]' : caseData.status === 'review_required' ? 'w-[60%]' : caseData.status === 'verified' && reports.length === 0 ? 'w-[80%]' : 'w-[100%]'}`}></div>
           </div>
           {[
             { label: 'Field Upload', sub: `${images.length} fields`, done: true },
             { label: 'Quality Check', sub: caseData.status !== 'draft' ? 'Completed' : 'Pending', done: caseData.status !== 'draft', active: caseData.status === 'draft' },
-            { label: 'AI Analysis', sub: caseData.status !== 'draft' ? caseData.date : 'Pending', done: !['draft', 'processing', 'AI Processing'].includes(caseData.status), active: ['processing', 'AI Processing'].includes(caseData.status) },
-            { label: 'Expert Review', sub: null, done: ['verified', 'completed', 'approved', 'Verified'].includes(caseData.status), active: ['review_required', 'review_pending', 'Review Required'].includes(caseData.status) },
-            { label: 'Verification', sub: ['verified', 'completed', 'approved', 'Verified'].includes(caseData.status) ? 'Verified' : 'Pending', done: ['verified', 'completed', 'approved', 'Verified'].includes(caseData.status) },
-            { label: 'Report', sub: caseData.status === 'approved' ? 'Generated' : 'Not Generated', done: caseData.status === 'approved' },
+            { label: 'AI Analysis', sub: caseData.status !== 'draft' ? caseData.date : 'Pending', done: caseData.status !== 'draft', active: caseData.status === 'draft' },
+            { label: 'Expert Review', sub: null, done: caseData.status === 'verified', active: caseData.status === 'review_required' },
+            { label: 'Verification', sub: caseData.status === 'verified' ? 'Verified' : 'Pending', done: caseData.status === 'verified' },
+            { label: 'Report', sub: reports.length > 0 ? 'Generated' : 'Not Generated', done: reports.length > 0 },
           ].map((step, i) => (
             <div key={i} className="relative z-10 flex flex-col items-center text-center">
               {step.done ? (
@@ -647,7 +644,7 @@ const CaseDetails = ({ caseData, onBack }) => {
                 </ul>
 
                 <div className="mt-1">
-                  <span className="text-xs text-slate-500 font-medium">Confidence Score</span>
+                  <span className="text-xs text-slate-500 font-medium">Image Quality Score</span>
                   <div className="text-base font-bold text-slate-900 my-1">
                     {analyses[0].confidence !== undefined ? `${formatConfidence(analyses[0].confidence)}%` : 'Processing...'}
                   </div>
@@ -723,20 +720,30 @@ const CaseDetails = ({ caseData, onBack }) => {
               <h3 className="text-sm font-bold text-slate-800">Reports</h3>
             </div>
             <div className="space-y-1.5 text-xs">
-              <div className="flex items-center gap-2"><span className="text-slate-400">Latest Report</span><span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-500">Not Generated</span></div>
-              <div className="flex items-center gap-2"><span className="text-slate-400">Version</span><span className="text-slate-700">—</span></div>
-              <div className="flex items-center gap-2"><span className="text-slate-400">Generated On</span><span className="text-slate-700">—</span></div>
+              <div className="flex items-center gap-2"><span className="text-slate-400">Latest Report</span><span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${reports.length > 0 ? (reports[0].status === 'OUTDATED' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600') : 'bg-slate-100 text-slate-500'}`}>{reports.length > 0 ? (reports[0].status === 'OUTDATED' ? 'Outdated' : 'Current') : 'Not Generated'}</span></div>
+              <div className="flex items-center gap-2"><span className="text-slate-400">Version</span><span className="text-slate-700">{reports.length > 0 ? (reports[0].version || 'v1') : '—'}</span></div>
+              <div className="flex items-center gap-2"><span className="text-slate-400">Generated On</span><span className="text-slate-700">{reports.length > 0 ? reports[0].date : '—'}</span></div>
             </div>
           </div>
           <div className="pt-4">
-            <button 
-              className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100/80 hover:bg-slate-200 border border-slate-200/80 rounded-lg transition shadow-sm"
-              onClick={handleGenerateReport}
-              disabled={isGeneratingReport}
-            >
-              <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-              {isGeneratingReport ? 'Generating...' : 'Generate Report'}
-            </button>
+            {reports.length > 0 && reports[0].status === 'CURRENT' ? (
+              <button 
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200/80 rounded-lg transition shadow-sm"
+                onClick={() => window.dispatchEvent(new CustomEvent('cellinsight_navigate', { detail: { view: 'reports' } }))}
+              >
+                <svg className="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                View Report
+              </button>
+            ) : (
+              <button 
+                className={`w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg transition shadow-sm ${!isAnalyzed ? 'bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed' : 'text-slate-600 bg-slate-100/80 hover:bg-slate-200 border border-slate-200/80'}`}
+                onClick={handleGenerateReport}
+                disabled={!isAnalyzed || isGeneratingReport}
+              >
+                <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                {isGeneratingReport ? 'Generating...' : (reports.length > 0 ? 'Update Report' : 'Generate Report')}
+              </button>
+            )}
           </div>
         </article>
       </section>
@@ -825,6 +832,46 @@ const CaseDetails = ({ caseData, onBack }) => {
                 ) : (
                   'Delete Case'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Success Modal */}
+      {showReportSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Report Generated</h3>
+              <p className="text-sm text-slate-600">
+                The clinical report for case <span className="font-semibold">{caseData.id}</span> has been successfully generated.
+              </p>
+              {reports.length > 0 && (
+                <div className="mt-3 py-2 px-3 bg-slate-50 border border-slate-100 rounded-lg text-xs flex justify-between items-center text-slate-600">
+                  <span className="font-medium">Version Created:</span>
+                  <span className="font-mono font-bold text-slate-800">{reports[0].version || 'v1'}</span>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center gap-3">
+              <button 
+                onClick={() => setShowReportSuccessModal(false)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Close
+              </button>
+              <button 
+                onClick={() => {
+                  setShowReportSuccessModal(false);
+                  window.dispatchEvent(new CustomEvent('cellinsight_navigate', { detail: { view: 'reports' } }));
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors shadow-sm"
+              >
+                View Report
               </button>
             </div>
           </div>
@@ -929,6 +976,8 @@ export default function Cases({ initialCase, newCasePatientId }) {
   const [modalImageFile, setModalImageFile] = useState(null);
   const [selectedCase, setSelectedCase] = useState(initialCase?.id ? initialCase : null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdCaseId, setCreatedCaseId] = useState(null);
   const formRef = useRef(null);
   const modalFileInputRef = useRef(null);
 
@@ -979,7 +1028,7 @@ export default function Cases({ initialCase, newCasePatientId }) {
           date: new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           finding: c.finding || '-',
           confidence: formatConfidence(c.confidence),
-          status: c.status === 'draft' ? 'AI Processing' : (['review_required', 'review_pending'].includes(c.status) ? 'Review Required' : (['verified', 'completed', 'approved'].includes(c.status) ? 'Verified' : 'AI Processing')),
+          status: c.status,
           priority: c.priority || 'Medium',
           colorType: c.colorType || 'neutral'
         }));
@@ -1079,6 +1128,8 @@ export default function Cases({ initialCase, newCasePatientId }) {
 
       await fetchCasesAndPatients();
       setIsModalOpen(false);
+      setCreatedCaseId(newCase._id);
+      setShowSuccessModal(true);
     } catch(err) {
       alert(`Case creation error: ${err.message}`);
     } finally {
@@ -1142,7 +1193,7 @@ export default function Cases({ initialCase, newCasePatientId }) {
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Review Required</div>
-            <div className="text-2xl font-bold text-amber-600 mt-1 tracking-tight">{cases.filter(c => c.status === 'Review Required').length}</div>
+            <div className="text-2xl font-bold text-amber-600 mt-1 tracking-tight">{cases.filter(c => c.status === 'review_required').length}</div>
             <div className="text-[11px] text-amber-600/80 mt-1 font-medium flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Cases awaiting expert review
             </div>
@@ -1155,7 +1206,7 @@ export default function Cases({ initialCase, newCasePatientId }) {
         <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">AI Processing</div>
-            <div className="text-2xl font-bold text-sky-600 mt-1 tracking-tight">{cases.filter(c => c.status === 'AI Processing').length}</div>
+            <div className="text-2xl font-bold text-sky-600 mt-1 tracking-tight">{cases.filter(c => c.status === 'draft').length}</div>
             <div className="text-[11px] text-sky-600/80 mt-1 font-medium">Cases currently being analyzed</div>
           </div>
           <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 shadow-sm border border-sky-100">
@@ -1206,10 +1257,9 @@ export default function Cases({ initialCase, newCasePatientId }) {
               onChange={setStatusFilter} 
               options={[
                 { value: 'All', label: 'All Statuses' },
-                { value: 'AI Processing', label: 'AI Processing' },
-                { value: 'Review Required', label: 'Review Required' },
-                { value: 'Reviewed', label: 'Reviewed' },
-                { value: 'Verified', label: 'Verified' }
+                { value: 'draft', label: 'AI Processing' },
+                { value: 'review_required', label: 'Review Required' },
+                { value: 'verified', label: 'Verified' }
               ]} 
             />
           </div>
@@ -1288,13 +1338,13 @@ export default function Cases({ initialCase, newCasePatientId }) {
                     )}
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    {caseItem.status === 'Review Required' && (
+                    {caseItem.status === 'review_required' && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60"><span className="material-symbols-outlined text-[12px]">schedule</span>Review Required</span>
                     )}
-                    {caseItem.status === 'Verified' && (
+                    {caseItem.status === 'verified' && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60"><span className="material-symbols-outlined text-[12px]">check_circle</span>Verified</span>
                     )}
-                    {caseItem.status === 'AI Processing' && (
+                    {caseItem.status === 'draft' && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-sky-700 border border-slate-200/60"><span className="material-symbols-outlined text-[12px] animate-spin">progress_activity</span>AI Processing</span>
                     )}
                   </td>
@@ -1513,6 +1563,59 @@ export default function Cases({ initialCase, newCasePatientId }) {
           </form>
         </div>
       </div>
+
+      {/* Creation Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-slate-900/40 z-[110] backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowSuccessModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4 border border-emerald-100">
+              <span className="material-symbols-outlined text-[24px]">check_circle</span>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Case Created</h3>
+            <p className="text-sm text-slate-600 mb-6">
+              The case was successfully created and the AI analysis has been initiated.
+            </p>
+            <div className="flex items-center gap-3 w-full">
+              <button 
+                className="flex-1 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors"
+                onClick={() => setShowSuccessModal(false)}
+              >
+                Close
+              </button>
+              <button 
+                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  const caseToSelect = cases.find(c => c._id === createdCaseId);
+                  if (caseToSelect) {
+                    setSelectedCase(caseToSelect);
+                  } else {
+                    // Fallback if not in current local state yet
+                    fetch(`${API_URL}/api/cases`, { headers: { 'Authorization': `Bearer ${token}` } })
+                      .then(res => res.json())
+                      .then(data => {
+                        const newC = data.find(c => c._id === createdCaseId);
+                        if (newC) {
+                          setSelectedCase({
+                            _id: newC._id,
+                            id: newC.caseId || newC._id.slice(-6).toUpperCase(),
+                            patient: newC.subjectId?.name || 'Unknown',
+                            patientId: newC.subjectId?.patientIdentifier || '-',
+                            test: newC.test || 'Blood Smear',
+                            status: newC.status,
+                            priority: newC.priority || 'Medium'
+                          });
+                        }
+                      });
+                  }
+                }}
+              >
+                View Case
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

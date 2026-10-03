@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import logoImg from './assets/logo.png';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -67,7 +68,7 @@ const ReportModal = ({ report, onClose }) => {
     { label: 'No. of Images Analysed', value: report.imageCount !== undefined ? report.imageCount : 0 },
     { label: 'Image Quality',           value: report.qualityStatus || 'Unknown' },
     { label: 'AI Model Version',        value: 'YOLOv8 + EfficientNet v1.2' },
-    { label: 'AI Confidence',           value: report.aiConfidence ? `${(report.aiConfidence * 100).toFixed(1)}%` : 'N/A' },
+    { label: 'Image Quality Score',     value: report.aiConfidence ? `${(report.aiConfidence * 100).toFixed(1)}%` : 'N/A' },
   ];
 
   const total = report.totalCells || 0;
@@ -119,12 +120,29 @@ const ReportModal = ({ report, onClose }) => {
   const tdCls  = 'border border-slate-300 px-3 py-2 text-xs text-slate-700';
   const secHdr = 'bg-slate-100 border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide';
 
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    const patientName = report.patient ? report.patient.replace(/\s+/g, '_') : 'Patient';
+    document.title = `${patientName}_${reportNum}`;
+    
+    const cleanup = () => {
+      document.title = originalTitle;
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    
+    // Give the browser slightly more time to register the title change natively
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
   return (
     <div
-      className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 print:p-0 print:bg-white print:backdrop-blur-none"
+      className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 print:absolute print:inset-0 print:bg-white print:backdrop-blur-none print:p-0 print:block print:h-auto print:w-full print:z-auto"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col overflow-hidden border border-slate-300 rounded-lg print:shadow-none print:max-h-none print:border-none print:rounded-none print:w-full print:max-w-full">
+      <div className="bg-white shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col overflow-hidden border border-slate-300 rounded-lg print:shadow-none print:max-h-none print:border-none print:rounded-none print:w-full print:max-w-full print:overflow-visible">
 
         {/* ── Modal chrome: Print + Close ────────────────────────────────── */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200 shrink-0 print:hidden">
@@ -132,7 +150,7 @@ const ReportModal = ({ report, onClose }) => {
           <div className="flex items-center gap-2">
             <button
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#0d9488] hover:bg-teal-700 rounded-lg transition shadow-sm"
-              onClick={() => window.print()}
+              onClick={handlePrint}
               type="button"
             >
               <span className="material-symbols-outlined text-[14px]">print</span>Print / Export PDF
@@ -148,15 +166,15 @@ const ReportModal = ({ report, onClose }) => {
         </div>
 
         {/* ── Printable clinical document ─────────────────────────────────── */}
-        <div className="overflow-y-auto flex-1 bg-white print:overflow-visible print:h-full" style={{ fontFamily: "'Calibri', 'Arial', sans-serif" }}>
-          <div className="px-8 py-6 space-y-0 mx-auto print:px-0 print:py-0" style={{ fontSize: '12px', color: '#1e293b', width: '100%', maxWidth: '210mm' }}>
+        <div className="overflow-y-auto flex-1 bg-white print:overflow-visible print:h-auto print:block" style={{ fontFamily: "'Calibri', 'Arial', sans-serif" }}>
+          <div className="px-8 py-6 space-y-0 mx-auto print:px-12 print:py-12" style={{ fontSize: '12px', color: '#1e293b', width: '100%', maxWidth: '210mm' }}>
 
             {/* ── LAB LETTERHEAD ─────────────────────────────────────────── */}
             <div className="flex items-start justify-between pb-4 border-b-2 border-slate-800 mb-0">
               <div className="flex items-start gap-4">
-                {/* Microscope icon */}
+                {/* Logo */}
                 <div className="w-14 h-14 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[48px] text-slate-700">biotech</span>
+                  <img src={logoImg} alt="CellInsight Lab Logo" className="w-12 h-12 object-contain rounded-lg" />
                 </div>
                 <div>
                   <h1 className="text-xl font-bold text-slate-900 leading-tight" style={{ fontFamily: 'Arial, sans-serif' }}>
@@ -255,7 +273,7 @@ const ReportModal = ({ report, onClose }) => {
                 <thead>
                   <tr>
                     <th className={thCls}>Parameter</th>
-                    <th className={`${thCls} text-center`}>Count (per field)</th>
+                    <th className={`${thCls} text-center`}>Total Count</th>
                     <th className={`${thCls} text-center`}>Percentage (%)</th>
                     <th className={`${thCls} text-center`}>Reference Range*</th>
                   </tr>
@@ -425,7 +443,7 @@ export default function Reports() {
 
   return (
     <>
-      <div className="flex flex-col w-full max-w-7xl mx-auto space-y-6 pb-10">
+      <div className="flex flex-col w-full max-w-7xl mx-auto space-y-6 pb-10 print:hidden">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>

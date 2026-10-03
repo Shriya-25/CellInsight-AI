@@ -20,6 +20,15 @@ const reportSchema = new mongoose.Schema(
       type: String,
       comment: 'The content of the report or a path to a PDF',
     },
+    version: {
+      type: Number,
+      default: 1,
+    },
+    status: {
+      type: String,
+      enum: ['CURRENT', 'OUTDATED'],
+      default: 'CURRENT',
+    },
   },
   {
     timestamps: true,
