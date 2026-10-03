@@ -105,6 +105,7 @@ const CaseDetails = ({ caseData, onBack }) => {
   const [reviewIndex, setReviewIndex] = useState(0);
   const [reviewForm, setReviewForm] = useState({ reviewStatus: 'accepted', finalLabel: '', comment: '' });
   const [isReviewing, setIsReviewing] = useState(false);
+  const [showReviewSuccessModal, setShowReviewSuccessModal] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [showReportSuccessModal, setShowReportSuccessModal] = useState(false);
 
@@ -140,7 +141,8 @@ const CaseDetails = ({ caseData, onBack }) => {
       })
       .then(res => res.json())
       .then(data => {
-         setReports(data.filter(r => r.caseId && (r.caseId._id === caseData._id || r.caseId === caseData._id)));
+         const matchingReports = data.filter(r => r.caseId && (r.caseId === caseData.caseId || r.caseId === caseData.id || r.caseId === caseData._id || r.caseId._id === caseData._id));
+         setReports(matchingReports.sort((a, b) => new Date(b.date) - new Date(a.date)));
       })
       .catch(err => console.error(err));
     }
@@ -241,8 +243,7 @@ const CaseDetails = ({ caseData, onBack }) => {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'verified' })
       });
-      alert("Case approved successfully.");
-      window.location.reload();
+      setShowReviewSuccessModal(true);
     } catch (err) {
       console.error(err);
       alert("Failed to approve case.");
@@ -271,8 +272,7 @@ const CaseDetails = ({ caseData, onBack }) => {
         } else {
           // Last cell, complete the case (Backend handles case status update)
           setIsReviewModalOpen(false);
-          alert("Case review completed.");
-          window.location.reload(); // Quick way to refresh
+          setShowReviewSuccessModal(true);
         }
       }
     } catch (err) {
@@ -307,9 +307,14 @@ const CaseDetails = ({ caseData, onBack }) => {
     }
   };
 
-  const flaggedCells = cells.filter(c => c.reviewPriority > 0.3 && c.reviewStatus === 'pending');
-  const hasReviewFlags = flaggedCells.length > 0;
   const isAnalyzed = analyses.length > 0 && analyses[0].results;
+  const computedStatus = caseData.status || (!isAnalyzed ? 'draft' : 'verified');
+  const hasReviewFlags = computedStatus === 'review_required';
+  
+  const isManuallyReviewed = computedStatus === 'verified' && (
+    analyses.some(a => a.results?.qualityStatus !== 'Good') ||
+    cells.some(c => c.reviewPriority > 0.3)
+  );
 
   const getRecentActivity = () => {
     const activities = [];
@@ -438,10 +443,10 @@ const CaseDetails = ({ caseData, onBack }) => {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xl font-bold text-slate-900">{caseData.id}</span>
-                {caseData.status === 'review_required' && (
+                {computedStatus === 'review_required' && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-200/60">Review Required</span>
                 )}
-                {caseData.status === 'verified' && (
+                {computedStatus === 'verified' && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200/60">Verified</span>
                 )}
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
@@ -505,15 +510,15 @@ const CaseDetails = ({ caseData, onBack }) => {
         </div>
         <div className="relative flex items-center justify-between max-w-4xl mx-auto px-4">
           <div className="absolute left-10 right-10 top-3 h-[2px] -translate-y-1/2 bg-slate-200 z-0">
-            <div className={`h-full bg-emerald-500 transition-all duration-500 ${caseData.status === 'draft' ? 'w-[20%]' : caseData.status === 'review_required' ? 'w-[60%]' : caseData.status === 'verified' && reports.length === 0 ? 'w-[80%]' : 'w-[100%]'}`}></div>
+            <div className={`h-full bg-emerald-500 transition-all duration-500 ${computedStatus === 'draft' ? 'w-[20%]' : computedStatus === 'review_required' ? 'w-[60%]' : computedStatus === 'verified' && reports.length === 0 ? 'w-[80%]' : 'w-[100%]'}`}></div>
           </div>
           {[
             { label: 'Field Upload', sub: `${images.length} fields`, done: true },
-            { label: 'Quality Check', sub: caseData.status !== 'draft' ? 'Completed' : 'Pending', done: caseData.status !== 'draft', active: caseData.status === 'draft' },
-            { label: 'AI Analysis', sub: caseData.status !== 'draft' ? caseData.date : 'Pending', done: caseData.status !== 'draft', active: caseData.status === 'draft' },
-            { label: 'Expert Review', sub: null, done: caseData.status === 'verified', active: caseData.status === 'review_required' },
-            { label: 'Verification', sub: caseData.status === 'verified' ? 'Verified' : 'Pending', done: caseData.status === 'verified' },
-            { label: 'Report', sub: reports.length > 0 ? 'Generated' : 'Not Generated', done: reports.length > 0 },
+            { label: 'Quality Check', sub: 'Pending', done: computedStatus !== 'draft', active: computedStatus === 'draft' },
+            { label: 'AI Analysis', sub: 'Pending', done: computedStatus !== 'draft', active: computedStatus === 'draft' },
+            { label: 'Expert Review', sub: 'Pending', done: computedStatus === 'verified', active: computedStatus === 'review_required' },
+            { label: 'Verification', sub: 'Pending', done: computedStatus === 'verified' },
+            { label: 'Report', sub: 'Not Generated', done: reports.length > 0 },
           ].map((step, i) => (
             <div key={i} className="relative z-10 flex flex-col items-center text-center">
               {step.done ? (
@@ -678,6 +683,8 @@ const CaseDetails = ({ caseData, onBack }) => {
               {isAnalyzed ? (
                 hasReviewFlags ? (
                   <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200/60 rounded-full">Review Required</span>
+                ) : isManuallyReviewed ? (
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-200/60 rounded-full">Review Performed</span>
                 ) : (
                   <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200/60 rounded-full">Review Not Required</span>
                 )
@@ -686,9 +693,19 @@ const CaseDetails = ({ caseData, onBack }) => {
               )}
             </div>
             <div className="space-y-1.5 text-xs">
-              <div className="flex items-center gap-2"><span className="text-slate-400">Status</span><span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${isAnalyzed ? (hasReviewFlags ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600') : 'bg-slate-50 text-slate-500'}`}>{isAnalyzed ? (hasReviewFlags ? 'Review Required' : 'Review Not Required') : 'Pending Analysis'}</span></div>
-              <div className="flex items-center gap-2"><span className="text-slate-400">Reviewer</span><span className="text-slate-700">Not Assigned</span></div>
-              <div className="flex items-start gap-2"><span className="text-slate-400 shrink-0">Notes</span><span className="text-slate-600">{!isAnalyzed ? 'Awaiting AI analysis.' : hasReviewFlags ? 'Manual verification of flagged cells needed.' : 'No AI flags detected.'}</span></div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Status</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                  !isAnalyzed ? 'bg-slate-50 text-slate-500' : 
+                  hasReviewFlags ? 'bg-amber-50 text-amber-600' : 
+                  isManuallyReviewed ? 'bg-blue-50 text-blue-600' : 
+                  'bg-emerald-50 text-emerald-600'
+                }`}>
+                  {!isAnalyzed ? 'Pending Analysis' : hasReviewFlags ? 'Review Required' : isManuallyReviewed ? 'Review Completed' : 'Review Not Required'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2"><span className="text-slate-400">Reviewer</span><span className="text-slate-700">{isManuallyReviewed ? 'Expert Pathologist' : 'Not Assigned'}</span></div>
+              <div className="flex items-start gap-2"><span className="text-slate-400 shrink-0">Notes</span><span className="text-slate-600">{!isAnalyzed ? 'Awaiting AI analysis.' : hasReviewFlags ? 'Manual verification of flagged cells needed.' : isManuallyReviewed ? 'Manual verification completed.' : 'No AI flags detected.'}</span></div>
             </div>
           </div>
           <div className="pt-4 flex gap-2">
@@ -832,6 +849,34 @@ const CaseDetails = ({ caseData, onBack }) => {
                 ) : (
                   'Delete Case'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Success Modal */}
+      {showReviewSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Review Completed</h3>
+              <p className="text-sm text-slate-600">
+                The manual review for case <span className="font-semibold">{caseData.id || caseData.caseId}</span> has been successfully saved.
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center">
+              <button 
+                onClick={() => {
+                  setShowReviewSuccessModal(false);
+                  window.location.reload();
+                }}
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+              >
+                Continue
               </button>
             </div>
           </div>
@@ -1330,7 +1375,7 @@ export default function Cases({ initialCase, newCasePatientId }) {
                       <div className="flex items-center gap-2 w-24">
                         <span className="font-mono text-xs text-slate-800 font-medium w-10">{caseItem.confidence}%</span>
                         <div className="w-14 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className={`h-full ${caseItem.colorType === 'error' ? 'bg-teal-600' : caseItem.colorType === 'success' ? 'bg-emerald-500' : caseItem.colorType === 'warning' ? 'bg-amber-500' : 'bg-teal-600'}`} style={{ width: `${caseItem.confidence}%` }}></div>
+                          <div className={`h-full ${caseItem.confidence >= 75 ? 'bg-teal-600' : caseItem.colorType === 'error' ? 'bg-teal-600' : caseItem.colorType === 'success' ? 'bg-emerald-500' : caseItem.colorType === 'warning' ? 'bg-amber-500' : 'bg-teal-600'}`} style={{ width: `${caseItem.confidence}%` }}></div>
                         </div>
                       </div>
                     ) : (

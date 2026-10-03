@@ -307,20 +307,27 @@ router.post('/:id/analyze', async (req, res) => {
       const savedAnalysis = await newAnalysis.save();
 
       // Create Cell documents
-      const cellDocs = result.detections.map(det => ({
-        analysisId: savedAnalysis._id,
-        cellType: det.class,
-        confidence: det.detectionConfidence,
-        subtype: det.subtype,
-        subtypeConfidence: det.subtypeConfidence,
-        reviewPriority: det.reviewPriority,
-        boundingBox: {
-          x: det.box.x1,
-          y: det.box.y1,
-          width: det.box.x2 - det.box.x1,
-          height: det.box.y2 - det.box.y1
+      const cellDocs = result.detections.map(det => {
+        let rStatus = 'pending';
+        if (det.reviewPriority <= 0.3 && result.qualityStatus === 'Good') {
+          rStatus = 'accepted';
         }
-      }));
+        return {
+          analysisId: savedAnalysis._id,
+          cellType: det.class,
+          confidence: det.detectionConfidence,
+          subtype: det.subtype,
+          subtypeConfidence: det.subtypeConfidence,
+          reviewPriority: det.reviewPriority,
+          reviewStatus: rStatus,
+          boundingBox: {
+            x: det.box.x1,
+            y: det.box.y1,
+            width: det.box.x2 - det.box.x1,
+            height: det.box.y2 - det.box.y1
+          }
+        };
+      });
 
       if (cellDocs.length > 0) {
         await Cell.insertMany(cellDocs);
@@ -341,7 +348,10 @@ router.post('/:id/analyze', async (req, res) => {
     const allCells = await Cell.find({ analysisId: { $in: analysisIds } });
     
     // Check if any cell requires review and hasn't been reviewed yet
-    const needsReview = allCells.some(c => c.reviewPriority > 0.3 && c.reviewStatus === 'pending');
+    const imageNeedsReview = allAnalyses.some(a => a.results.qualityStatus !== 'Good');
+    const cellNeedsReview = allCells.some(c => c.reviewStatus === 'pending');
+    
+    const needsReview = imageNeedsReview || cellNeedsReview;
     const newStatus = needsReview ? 'review_required' : 'verified';
     
     // Update case status at the end regardless if some images failed

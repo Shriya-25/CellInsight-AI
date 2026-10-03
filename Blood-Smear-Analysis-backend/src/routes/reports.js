@@ -75,9 +75,7 @@ router.get('/', async (req, res) => {
 
       cells.forEach(c => {
         if (c.reviewStatus === 'pending') {
-          if (c.reviewPriority > 0.3) {
-            reviewSummary.pending++;
-          }
+          reviewSummary.pending++;
         } else if (c.reviewStatus && reviewSummary[c.reviewStatus] !== undefined) {
           reviewSummary[c.reviewStatus]++;
         } else if (c.reviewStatus) {

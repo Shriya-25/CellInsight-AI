@@ -177,9 +177,9 @@ export default function Dashboard() {
                             {c.confidence != null ? (
                               <div className="flex items-center gap-2">
                                 <div className="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                                  <div className={`h-full rounded-full ${c.colorType === 'warning' ? 'bg-amber-500' : 'bg-primary'}`} style={{ width: `${Math.round(c.confidence * 100)}%` }}></div>
+                                  <div className={`h-full rounded-full ${Math.round(c.confidence * 100) >= 75 ? 'bg-teal-600' : c.colorType === 'warning' ? 'bg-amber-500' : 'bg-primary'}`} style={{ width: `${Math.round(c.confidence * 100)}%` }}></div>
                                 </div>
-                                <span className={`font-data-mono text-label-sm ${c.colorType === 'warning' ? 'text-amber-700' : 'text-on-surface'}`}>{Math.round(c.confidence * 100)}%</span>
+                                <span className={`font-data-mono text-label-sm ${Math.round(c.confidence * 100) >= 75 ? 'text-teal-700' : c.colorType === 'warning' ? 'text-amber-700' : 'text-on-surface'}`}>{Math.round(c.confidence * 100)}%</span>
                               </div>
                             ) : (
                               <span className="text-secondary text-label-sm">N/A</span>

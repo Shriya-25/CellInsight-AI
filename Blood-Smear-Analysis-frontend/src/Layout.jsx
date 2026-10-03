@@ -7,6 +7,23 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
   const [showDropdown, setShowDropdown] = useState(false);
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+  const [personal, setPersonal] = useState(() => {
+    const saved = localStorage.getItem('profile_personal');
+    return saved ? JSON.parse(saved) : { name: 'Dr. Shriya Kulkarni' };
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem('profile_personal');
+    if (saved) setPersonal(JSON.parse(saved));
+  }, [currentView]);
+
+  const getInitials = (name) => {
+    const cleanName = name.replace(/^Dr\.?\s*/i, '').trim();
+    const parts = cleanName.split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return cleanName ? cleanName.substring(0, 2).toUpperCase() : 'SK';
+  };
+
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -148,11 +165,11 @@ export default function Layout({ children, currentView, onNavigate, user, onLogo
             role="button"
             tabIndex={0}
           >
-            <div className="w-9 h-9 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center shrink-0 border border-teal-100">
-              SK
+            <div className="w-9 h-9 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center shrink-0 border border-teal-100 overflow-hidden">
+              {getInitials(personal.name)}
             </div>
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="font-headline-sm text-body-sm font-semibold text-on-surface truncate">Dr. Shriya Kulkarni</span>
+              <span className="font-headline-sm text-body-sm font-semibold text-on-surface truncate">{personal.name}</span>
               <span className="font-label-sm text-label-sm text-secondary truncate">Pathologist</span>
             </div>
           </div>

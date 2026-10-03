@@ -32,13 +32,19 @@ router.patch('/:id/review', async (req, res) => {
       const Analysis = (await import('../models/Analysis.js')).default;
       
       const analysis = await Analysis.findById(updatedCell.analysisId);
-      const caseId = analysis ? analysis.caseId : null;
+      
+      let caseId = null;
+      if (analysis && analysis.imageId) {
+        const ImageModel = (await import('../models/Image.js')).default;
+        const image = await ImageModel.findById(analysis.imageId);
+        if (image) caseId = image.caseId;
+      }
       
       if (caseId) {
         const Report = (await import('../models/Report.js')).default;
         await Report.updateMany({ caseId, status: 'CURRENT' }, { $set: { status: 'OUTDATED' } });
         
-        // Also check if this was the last pending cell
+        // Also check if this was the last pending flagged cell
         const Case = (await import('../models/Case.js')).default;
         const ImageModel = (await import('../models/Image.js')).default;
         
@@ -47,14 +53,20 @@ router.patch('/:id/review', async (req, res) => {
         const allAnalyses = await Analysis.find({ imageId: { $in: imageIds } });
         const analysisIds = allAnalyses.map(a => a._id);
         
-        const remainingPending = await Cell.countDocuments({
+        const remainingFlagged = await Cell.countDocuments({
           analysisId: { $in: analysisIds },
           reviewPriority: { $gt: 0.3 },
           reviewStatus: 'pending'
         });
         
-        if (remainingPending === 0) {
+        if (remainingFlagged === 0) {
           await Case.findByIdAndUpdate(caseId, { status: 'verified' });
+          
+          // Auto-accept any remaining low-priority pending cells (e.g. kept pending due to poor image quality)
+          await Cell.updateMany(
+            { analysisId: { $in: analysisIds }, reviewStatus: 'pending' },
+            { $set: { reviewStatus: 'accepted' } }
+          );
         }
       }
 

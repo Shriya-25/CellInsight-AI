@@ -93,27 +93,52 @@ const EditModal = ({ title, fields, onSave, onClose }) => {
 
 // ─── Main Profile Component ────────────────────────────────────────────────────
 export default function Profile() {
-  const [personal, setPersonal] = useState({
-    name: 'Dr. Shriya Kulkarni',
-    email: 'shriya.kulkarni@cellinsightlab.com',
-    phone: '+91 81495 91740',
-    dob: '12 Mar 1990',
-    gender: 'Female',
-    address: 'Pune, Maharashtra, India',
-    department: 'Pathology',
-    empId: 'PATH-001',
-    joining: '15 Jan 2025',
+  const [personal, setPersonal] = useState(() => {
+    const saved = localStorage.getItem('profile_personal');
+    if (saved) return JSON.parse(saved);
+    return {
+      name: 'Dr. Shriya Kulkarni',
+      email: 'shriya.kulkarni@cellinsightlab.com',
+      phone: '+91 81495 91740',
+      dob: '12 Mar 1990',
+      gender: 'Female',
+      address: 'Pune, Maharashtra, India',
+      department: 'Pathology',
+      empId: 'PATH-001',
+      joining: '15 Jan 2025',
+    };
   });
 
-  const [professional, setProfessional] = useState({
-    qualification: 'MD Pathology',
-    specialization: 'Hematology',
-    regNo: 'MH-PATH-45871',
-    institution: 'AISSMS IOIT, Pune',
-    experience: '2+ Years',
+  const [professional, setProfessional] = useState(() => {
+    const saved = localStorage.getItem('profile_professional');
+    if (saved) return JSON.parse(saved);
+    return {
+      qualification: 'MD Pathology',
+      specialization: 'Hematology',
+      regNo: 'MH-PATH-45871',
+      institution: 'AISSMS IOIT, Pune',
+      experience: '2+ Years',
+    };
   });
+
+  const [signatureImage, setSignatureImage] = useState(() => localStorage.getItem('profile_signature') || null);
+
+  React.useEffect(() => {
+    localStorage.setItem('profile_personal', JSON.stringify(personal));
+  }, [personal]);
+
+  React.useEffect(() => {
+    localStorage.setItem('profile_professional', JSON.stringify(professional));
+  }, [professional]);
 
   const [editModal, setEditModal] = useState(null); // 'personal' | 'professional' | null
+
+  const getInitials = (name) => {
+    const cleanName = name.replace(/^Dr\.?\s*/i, '').trim();
+    const parts = cleanName.split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return cleanName ? cleanName.substring(0, 2).toUpperCase() : 'SK';
+  };
 
   return (
     <>
@@ -138,7 +163,7 @@ export default function Profile() {
           <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6">
             {/* Avatar */}
             <div className="w-24 h-24 rounded-full bg-teal-50 text-teal-700 font-bold text-2xl flex items-center justify-center shrink-0 border-2 border-teal-100 shadow-sm">
-              SK
+              {getInitials(personal.name)}
             </div>
             {/* Info */}
             <div className="space-y-1.5 flex-1 min-w-0">
@@ -242,20 +267,40 @@ export default function Profile() {
             <InfoCard icon="draw" title="Digital Signature" onEdit={() => {}} editLabel="Update">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
                 {/* Signature Preview */}
-                <div className="h-28 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center p-4">
-                  <span
-                    style={{ fontFamily: "'Caveat', cursive", fontSize: '1.8rem', color: '#1e3a5f', transform: 'rotate(-2deg)', display: 'block' }}
-                    className="select-none tracking-wide"
-                  >
-                    Shriya Kulkarni
-                  </span>
+                <div className="h-28 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center p-4 overflow-hidden">
+                  {signatureImage ? (
+                    <img src={signatureImage} alt="Digital Signature" className="max-h-full max-w-full object-contain mix-blend-multiply" />
+                  ) : (
+                    <span
+                      style={{ fontFamily: "'Caveat', cursive", fontSize: '1.8rem', color: '#1e3a5f', transform: 'rotate(-2deg)', display: 'block' }}
+                      className="select-none tracking-wide"
+                    >
+                      {personal.name.replace(/^Dr\.?\s*/i, '')}
+                    </span>
+                  )}
                 </div>
                 {/* Upload Box */}
-                <div className="h-28 border-2 border-dashed border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-teal-50/30 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors p-3 text-center group">
+                <label className="h-28 border-2 border-dashed border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-teal-50/30 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors p-3 text-center group">
                   <span className="material-symbols-outlined text-[24px] text-slate-400 group-hover:text-teal-600 transition-colors mb-1">upload_file</span>
                   <span className="text-xs font-semibold text-slate-700 group-hover:text-teal-800">Upload Signature</span>
                   <span className="text-[10px] text-slate-400 mt-0.5">PNG, JPG (Max 2 MB)</span>
-                </div>
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                          setSignatureImage(e.target.result);
+                          localStorage.setItem('profile_signature', e.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
               </div>
               {/* Status */}
               <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
