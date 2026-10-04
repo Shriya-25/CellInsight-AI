@@ -133,12 +133,8 @@ export default function Login({ onLoginSuccess }) {
                   </div>
                 </div>
 
-                {/* Remember Me & Forgot Password */}
+                {/* Forgot Password */}
                 <div className="form-options">
-                  <label className="remember-me">
-                    <input defaultChecked type="checkbox" />
-                    <span>Remember me</span>
-                  </label>
                   <a className="forgot-pwd" href="#">Forgot password?</a>
                 </div>
 
