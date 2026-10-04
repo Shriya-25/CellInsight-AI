@@ -132,6 +132,9 @@ router.delete('/:id', async (req, res) => {
       }
       
       await Case.deleteMany({ subjectId: req.params.id });
+      
+      const Report = (await import('../models/Report.js')).default;
+      await Report.deleteMany({ caseId: { $in: caseIds } });
     }
     
     return res.json({ message: 'Patient deleted successfully.' });

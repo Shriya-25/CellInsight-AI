@@ -143,6 +143,9 @@ router.delete('/:id', async (req, res) => {
       await ImageModel.deleteMany({ caseId: id });
     }
     
+    // Also delete associated reports
+    await Report.deleteMany({ caseId: id });
+    
     return res.json({ message: 'Case deleted successfully.' });
   } catch (error) {
     console.error('Error deleting case:', error);

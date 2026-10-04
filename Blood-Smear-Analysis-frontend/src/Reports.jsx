@@ -445,6 +445,13 @@ export default function Reports() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('All');
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, dateFilter]);
+  
   const [selectedReport, setSelectedReport] = useState(null);
 
   const fetchReports = async () => {
@@ -476,6 +483,9 @@ export default function Reports() {
     const matchS = statusFilter === 'All' || r.status === statusFilter;
     return matchQ && matchS;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const currentItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const outdatedCount = reportsData.filter(r => r.status === 'OUTDATED').length;
 
@@ -585,7 +595,7 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                {filtered.map((r) => (
+                {currentItems.map((r) => (
                   <tr
                     key={r.id}
                     className="hover:bg-teal-50/30 transition-colors cursor-pointer group"
@@ -631,12 +641,24 @@ export default function Reports() {
           {/* Pagination Footer */}
           <div className="bg-slate-50/70 border-t border-slate-100 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
             <div>
-              Showing <span className="font-mono font-semibold text-slate-800">{filtered.length}</span> of <span className="font-mono font-semibold text-slate-800">28</span> reports
+              Showing <span className="font-mono font-semibold text-slate-800">{currentItems.length}</span> of <span className="font-mono font-semibold text-slate-800">{filtered.length}</span> reports
             </div>
             <div className="flex items-center gap-2">
-              <button className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-400 cursor-not-allowed text-xs font-medium" disabled>Previous</button>
-              <span className="px-2.5 py-1 bg-teal-600 text-white font-mono rounded text-xs">Page 1 of 6</span>
-              <button className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors">Next</button>
+              <button 
+                className={`px-2.5 py-1 bg-white border border-slate-200 rounded text-xs font-medium transition-colors ${currentPage === 1 ? 'text-slate-400 cursor-not-allowed' : 'text-slate-700 hover:bg-slate-50'}`}
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+              >
+                Previous
+              </button>
+              <span className="px-2 font-mono text-xs text-slate-700">Page {currentPage} of {totalPages}</span>
+              <button 
+                className={`px-2.5 py-1 bg-white border border-slate-200 rounded text-xs font-medium transition-colors ${currentPage === totalPages ? 'text-slate-400 cursor-not-allowed' : 'text-slate-700 hover:bg-slate-50'}`}
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>

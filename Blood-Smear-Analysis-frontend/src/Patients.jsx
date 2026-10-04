@@ -574,6 +574,12 @@ export default function Patients() {
   const [caseStatusFilter, setCaseStatusFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('ALL');
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, bloodFilter, genderFilter, caseStatusFilter, dateFilter]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -765,6 +771,9 @@ export default function Patients() {
     return matchesQuery && matchesBlood && matchesGender && matchesCase;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredPatients.length / itemsPerPage));
+  const currentItems = filteredPatients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   if (selectedPatient) {
     return <PatientProfile 
       patient={selectedPatient} 
@@ -950,7 +959,7 @@ export default function Patients() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-              {filteredPatients.map(patient => (
+              {currentItems.map(patient => (
                 <tr 
                   key={patient.id}
                   onClick={() => handleRowClick(patient)}
@@ -1005,12 +1014,24 @@ export default function Patients() {
         {/* Table Footer / Pagination */}
         <div className="bg-slate-50/70 border-t border-slate-100 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <span className="font-mono font-semibold text-slate-800">{filteredPatients.length}</span> of <span className="font-mono font-semibold text-slate-800">{patients.length}</span> registered patients
+            Showing <span className="font-mono font-semibold text-slate-800">{currentItems.length}</span> of <span className="font-mono font-semibold text-slate-800">{filteredPatients.length}</span> registered patients
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-400 cursor-not-allowed text-xs font-medium" disabled>Previous</button>
-            <span className="px-2 font-mono text-xs text-slate-700">Page 1 of 179</span>
-            <button className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors">Next</button>
+            <button 
+              className={`px-2.5 py-1 bg-white border border-slate-200 rounded text-xs font-medium transition-colors ${currentPage === 1 ? 'text-slate-400 cursor-not-allowed' : 'text-slate-700 hover:bg-slate-50'}`}
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => p - 1)}
+            >
+              Previous
+            </button>
+            <span className="px-2 font-mono text-xs text-slate-700">Page {currentPage} of {totalPages}</span>
+            <button 
+              className={`px-2.5 py-1 bg-white border border-slate-200 rounded text-xs font-medium transition-colors ${currentPage === totalPages ? 'text-slate-400 cursor-not-allowed' : 'text-slate-700 hover:bg-slate-50'}`}
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => p + 1)}
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>

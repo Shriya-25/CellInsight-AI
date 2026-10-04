@@ -1013,6 +1013,13 @@ export default function Cases({ initialCase, newCasePatientId }) {
   const [statusFilter, setStatusFilter] = useState('All');
   const [testFilter, setTestFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, testFilter, priorityFilter]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalPatient, setModalPatient] = useState('');
   const [modalTestType, setModalTestType] = useState('Blood Smear (Peripheral)');
@@ -1198,6 +1205,9 @@ export default function Cases({ initialCase, newCasePatientId }) {
     return matchQuery && matchStatus && matchTest && matchPriority;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredCases.length / itemsPerPage));
+  const currentItems = filteredCases.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   if (selectedCase) {
     return <CaseDetails caseData={selectedCase} onBack={() => setSelectedCase(null)} />;
   }
@@ -1354,7 +1364,7 @@ export default function Cases({ initialCase, newCasePatientId }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-              {filteredCases.map(caseItem => (
+              {currentItems.map(caseItem => (
                 <tr key={caseItem.id} className="hover:bg-teal-50/30 transition-colors cursor-pointer group" onClick={() => setSelectedCase(caseItem)}>
                   <td className="py-3.5 px-4 font-mono font-semibold text-teal-700 whitespace-nowrap">
                     {caseItem.id}
@@ -1424,12 +1434,24 @@ export default function Cases({ initialCase, newCasePatientId }) {
         {/* Table Pagination & Counter */}
         <div className="bg-slate-50/70 border-t border-slate-100 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <span className="font-mono font-semibold text-slate-800">{filteredCases.length}</span> of <span className="font-mono font-semibold text-slate-800">{cases.length}</span> cases
+            Showing <span className="font-mono font-semibold text-slate-800">{currentItems.length}</span> of <span className="font-mono font-semibold text-slate-800">{filteredCases.length}</span> cases
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-400 cursor-not-allowed text-xs font-medium" disabled>Previous</button>
-            <span className="px-2 font-mono text-xs text-slate-700">Page 1 of 30</span>
-            <button className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors">Next</button>
+            <button 
+              className={`px-2.5 py-1 bg-white border border-slate-200 rounded text-xs font-medium transition-colors ${currentPage === 1 ? 'text-slate-400 cursor-not-allowed' : 'text-slate-700 hover:bg-slate-50'}`}
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => p - 1)}
+            >
+              Previous
+            </button>
+            <span className="px-2 font-mono text-xs text-slate-700">Page {currentPage} of {totalPages}</span>
+            <button 
+              className={`px-2.5 py-1 bg-white border border-slate-200 rounded text-xs font-medium transition-colors ${currentPage === totalPages ? 'text-slate-400 cursor-not-allowed' : 'text-slate-700 hover:bg-slate-50'}`}
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => p + 1)}
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
