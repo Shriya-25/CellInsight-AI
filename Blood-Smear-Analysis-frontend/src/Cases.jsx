@@ -860,7 +860,7 @@ const CaseDetails = ({ caseData, onBack }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4">
+              <div className="w-12 h-12 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mx-auto mb-4">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
               </div>
               <h3 className="text-lg font-bold text-slate-900 mb-2">Review Completed</h3>
@@ -874,7 +874,7 @@ const CaseDetails = ({ caseData, onBack }) => {
                   setShowReviewSuccessModal(false);
                   window.location.reload();
                 }}
-                className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors shadow-sm"
               >
                 Continue
               </button>
@@ -948,15 +948,15 @@ const CaseDetails = ({ caseData, onBack }) => {
                 
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Review Decision</label>
-                  <select 
-                    className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  <FormSelect 
                     value={reviewForm.reviewStatus}
-                    onChange={(e) => setReviewForm({ ...reviewForm, reviewStatus: e.target.value })}
-                  >
-                    <option value="accepted">Accept AI Result</option>
-                    <option value="reclassified">Reclassify</option>
-                    <option value="unknown">Mark as Unknown</option>
-                  </select>
+                    onChange={(val) => setReviewForm({ ...reviewForm, reviewStatus: val })}
+                    options={[
+                      { value: 'accepted', label: 'Accept AI Result' },
+                      { value: 'reclassified', label: 'Reclassify' },
+                      { value: 'unknown', label: 'Mark as Unknown' }
+                    ]}
+                  />
                 </div>
 
                 {reviewForm.reviewStatus === 'reclassified' && (
