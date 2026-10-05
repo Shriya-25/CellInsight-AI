@@ -339,7 +339,7 @@ export default function Dashboard() {
                         <span className="font-data-mono text-[11px] text-secondary">{timeString}</span>
                         <p className="text-body-sm text-on-surface">
                           {audit.performedBy ? <span className="font-medium text-primary">{audit.performedBy.name} </span> : ''}
-                          {audit.details ? audit.details : (
+                          {audit.details ? (typeof audit.details === 'object' ? JSON.stringify(audit.details) : audit.details) : (
                             <>{audit.action.replace(/_/g, ' ').toLowerCase()} {audit.targetResource && audit.targetResource.resourceId ? ` on ${audit.targetResource.resourceType}` : ''}</>
                           )}
                         </p>
