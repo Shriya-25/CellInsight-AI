@@ -56,24 +56,27 @@ router.get('/', async (req, res) => {
       .limit(5)
       .lean();
 
-    // 4. AI Result Distribution (Today)
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const analyses = await Analysis.find({ createdAt: { $gte: startOfToday } });
+    // 4. AI Result Distribution (All images of existing non-deleted cases)
+    const validCases = await Case.find().select('_id');
+    const validCaseIds = validCases.map(c => c._id);
+    const validImages = await ImageModel.find({ caseId: { $in: validCaseIds } });
+    const validImageIds = validImages.map(img => img._id);
+
+    const dataToAggregate = [];
+    for (const imgId of validImageIds) {
+      const analysis = await Analysis.findOne({ imageId: imgId }).sort({ createdAt: -1 });
+      if (analysis) {
+        dataToAggregate.push(analysis);
+      }
+    }
+
     let distribution = {
-      total: analyses.length,
+      total: dataToAggregate.length,
       normal: 0,
       abnormal: 0,
       reviewRequired: 0
     };
     
-    // As a fallback if no analysis run today, we count all time just so dashboard isn't completely empty for demo purposes
-    let dataToAggregate = analyses;
-    if (analyses.length === 0) {
-      dataToAggregate = await Analysis.find({});
-      distribution.total = dataToAggregate.length;
-    }
-
     dataToAggregate.forEach(a => {
       if (a.results?.qualityStatus === 'Good') {
         distribution.normal++;
