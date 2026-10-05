@@ -649,6 +649,68 @@ const CaseDetails = ({ caseData, onBack }) => {
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex flex-col gap-3">
+                <div className="mt-1">
+                  <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-3">AI Confidence</h4>
+                  
+                  {(() => {
+                    const totalConfidence = cells.reduce((acc, cell) => acc + (cell.confidence || 0), 0);
+                    const avgDetectionConfidence = cells.length > 0 ? (totalConfidence / cells.length) : null;
+                    
+                    const wbcCells = cells.filter(c => c.cellType === 'WBC' && c.subtypeConfidence != null);
+                    const totalWBCConfidence = wbcCells.reduce((acc, cell) => acc + (cell.subtypeConfidence || 0), 0);
+                    const avgWBCConfidence = wbcCells.length > 0 ? (totalWBCConfidence / wbcCells.length) : null;
+
+                    const getConfidenceColor = (percent) => {
+                      if (percent >= 60) return 'bg-teal-600';
+                      if (percent >= 40) return 'bg-amber-500';
+                      return 'bg-red-500';
+                    };
+
+                    return (
+                      <div className="space-y-3 text-xs mb-3">
+                        <div>
+                          <div className="flex justify-between mb-1">
+                            <span className="text-slate-500 font-medium">Average Detection</span>
+                            <span className="text-slate-800 font-semibold">{avgDetectionConfidence !== null ? `${Math.round(avgDetectionConfidence * 100)}%` : 'N/A'}</span>
+                          </div>
+                          {avgDetectionConfidence !== null && (
+                            <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${getConfidenceColor(Math.round(avgDetectionConfidence * 100))}`} style={{width:`${Math.round(avgDetectionConfidence * 100)}%`}}></div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between mb-1">
+                            <span className="text-slate-500 font-medium">Average WBC Classification</span>
+                            <span className="text-slate-800 font-semibold">{avgWBCConfidence !== null ? `${Math.round(avgWBCConfidence * 100)}%` : 'N/A'}</span>
+                          </div>
+                          {avgWBCConfidence !== null && (
+                            <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${getConfidenceColor(Math.round(avgWBCConfidence * 100))}`} style={{width:`${Math.round(avgWBCConfidence * 100)}%`}}></div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="mb-2">
+                    <div className="flex justify-between mb-1 text-xs">
+                      <span className="text-slate-500 font-medium">Image Quality Score</span>
+                      <span className="text-slate-800 font-semibold">{analyses[0].confidence !== undefined ? `${formatConfidence(analyses[0].confidence)}%` : 'Processing...'}</span>
+                    </div>
+                    {analyses[0].confidence !== undefined && (
+                      <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${
+                          formatConfidence(analyses[0].confidence) >= 60 ? 'bg-teal-600' :
+                          formatConfidence(analyses[0].confidence) >= 40 ? 'bg-amber-500' : 'bg-red-500'
+                        }`} style={{width:`${formatConfidence(analyses[0].confidence)}%`}}></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <ul className="space-y-2 text-xs">
                   {analyses[0].results.qualityReasons && analyses[0].results.qualityReasons.length > 0 ? (
                     analyses[0].results.qualityReasons.map((reason, i) => (
@@ -664,18 +726,6 @@ const CaseDetails = ({ caseData, onBack }) => {
                     </li>
                   )}
                 </ul>
-
-                <div className="mt-1">
-                  <span className="text-xs text-slate-500 font-medium">Image Quality Score</span>
-                  <div className="text-base font-bold text-slate-900 my-1">
-                    {analyses[0].confidence !== undefined ? `${formatConfidence(analyses[0].confidence)}%` : 'Processing...'}
-                  </div>
-                  {analyses[0].confidence !== undefined && (
-                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-teal-600 rounded-full" style={{width:`${formatConfidence(analyses[0].confidence)}%`}}></div>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           ) : (
