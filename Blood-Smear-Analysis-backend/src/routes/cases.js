@@ -3,6 +3,12 @@ import Case from '../models/Case.js';
 import Notification from '../models/Notification.js';
 import { generateNextId } from '../utils/generateId.js';
 import Report from '../models/Report.js';
+import { uploadToDisk } from '../middleware/upload.js';
+import ImageModel from '../models/Image.js';
+import Analysis from '../models/Analysis.js';
+import Cell from '../models/Cell.js';
+import fs from 'fs';
+import path from 'path';
 
 const router = express.Router();
 
@@ -152,13 +158,6 @@ router.delete('/:id', async (req, res) => {
     return res.status(500).json({ error: 'Failed to delete case.' });
   }
 });
-
-import { uploadToDisk } from '../middleware/upload.js';
-import ImageModel from '../models/Image.js';
-import Analysis from '../models/Analysis.js';
-import Cell from '../models/Cell.js';
-import fs from 'fs';
-import path from 'path';
 
 const INFERENCE_URL = process.env.INFERENCE_URL || "http://localhost:8000";
 
@@ -412,31 +411,6 @@ router.get('/:id/cells', async (req, res) => {
   } catch (error) {
     console.error('Error fetching cells:', error);
     return res.status(500).json({ error: 'Failed to fetch cells.' });
-  }
-});
-
-// PATCH /api/cases/:id - Update case status/priority/etc.
-router.patch('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, priority, assignedTo, notes } = req.body;
-    
-    const updateData = { $set: {} };
-    if (status) updateData.$set.status = status;
-    if (priority) updateData.$set.priority = priority;
-    if (assignedTo) updateData.$set.assignedTo = assignedTo;
-    if (notes) updateData.$set.notes = notes;
-
-    const updatedCase = await Case.findByIdAndUpdate(id, updateData, { new: true });
-    
-    if (!updatedCase) {
-      return res.status(404).json({ error: 'Case not found.' });
-    }
-
-    return res.json(updatedCase);
-  } catch (error) {
-    console.error('Error updating case:', error);
-    return res.status(500).json({ error: 'Failed to update case.' });
   }
 });
 
